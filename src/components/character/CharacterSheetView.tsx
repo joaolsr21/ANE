@@ -602,14 +602,14 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
               </span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 sm:gap-3">
               {(['FOR', 'AGI', 'INT', 'PRE', 'VIG'] as AttributeKey[]).map((attr) => {
                 const val = getAttrValue(attr);
                 const diceFormula = ATTRIBUTE_DICE_FORMULA[val];
                 return (
                   <div
                     key={attr}
-                    className="bg-bg-main border border-muted-ash/20 rounded-xl p-3.5 flex flex-col items-center justify-between space-y-2.5"
+                    className="bg-bg-main border border-muted-ash/20 rounded-xl p-3 flex flex-col items-center justify-between space-y-2 last:col-span-2 sm:last:col-span-1"
                   >
                     <span className="text-xs font-mono uppercase tracking-wider text-muted-ash">
                       {attr}
@@ -1024,11 +1024,11 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
               </h3>
 
               {/* Adicionar Habilidade Geral */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <select
                   value={selectedNewAbilityId}
                   onChange={(e) => setSelectedNewAbilityId(e.target.value)}
-                  className="bg-bg-main border border-muted-ash/30 rounded-lg px-2.5 py-1.5 text-xs text-text-main focus:outline-none focus:border-secondary-uv"
+                  className="flex-1 min-w-0 bg-bg-main border border-muted-ash/30 rounded-lg px-2.5 py-1.5 text-xs text-text-main focus:outline-none focus:border-secondary-uv"
                 >
                   {ANE_GENERAL_ABILITIES.map((ab) => (
                     <option key={ab.id} value={ab.id}>
@@ -1039,7 +1039,7 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
                 <button
                   type="button"
                   onClick={handleAddGeneralAbility}
-                  className="px-3 py-1.5 rounded-lg bg-secondary-uv hover:bg-secondary-uv/90 text-text-main text-xs font-bold flex items-center gap-1"
+                  className="px-3 py-1.5 rounded-lg bg-secondary-uv hover:bg-secondary-uv/90 text-text-main text-xs font-bold flex items-center gap-1 shrink-0"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Adicionar

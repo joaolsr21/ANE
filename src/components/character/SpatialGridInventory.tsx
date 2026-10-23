@@ -330,8 +330,26 @@ export const SpatialGridInventory: React.FC<SpatialGridInventoryProps> = ({
   } | null>(null);
 
   const [hoverCell, setHoverCell] = useState<{ x: number; y: number } | null>(null);
+  const [selectedTouchItemId, setSelectedTouchItemId] = useState<string | null>(null);
+  const [responsiveCellSize, setResponsiveCellSize] = useState<number>(CELL_SIZE_PX);
+
+  useEffect(() => {
+    const updateCellSize = () => {
+      if (window.innerWidth < 400) {
+        setResponsiveCellSize(38);
+      } else if (window.innerWidth < 640) {
+        setResponsiveCellSize(44);
+      } else {
+        setResponsiveCellSize(CELL_SIZE_PX);
+      }
+    };
+    updateCellSize();
+    window.addEventListener('resize', updateCellSize);
+    return () => window.removeEventListener('resize', updateCellSize);
+  }, []);
 
   const backpackItems = items.filter((i) => !i.equippedSlot);
+  const selectedTouchItem = items.find((i) => i.id === selectedTouchItemId) || null;
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -496,6 +514,56 @@ export const SpatialGridInventory: React.FC<SpatialGridInventoryProps> = ({
 
   const removeItem = (id: string) => {
     setItems((prev) => prev.filter((i) => i.id !== id));
+    if (selectedTouchItemId === id) setSelectedTouchItemId(null);
+  };
+
+  // Suporte Mobile (Toque para selecionar e toque na célula ou slot para mover/equipar)
+  const handleTouchCellTap = (cellX: number, cellY: number) => {
+    if (!selectedTouchItem) return;
+    const valid = canItemFitAt(
+      backpackItems,
+      cellX,
+      cellY,
+      selectedTouchItem.width,
+      selectedTouchItem.height,
+      gridCols,
+      gridRows,
+      selectedTouchItem.id
+    );
+    if (valid) {
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === selectedTouchItem.id
+            ? {
+                ...item,
+                x: cellX,
+                y: cellY,
+                equippedSlot: null,
+              }
+            : item
+        )
+      );
+      setSelectedTouchItemId(null);
+    }
+  };
+
+  const handleTouchEquipSlotTap = (
+    slotKey: EquipmentSlotKey,
+    acceptedCategories: SpatialGridItem['category'][]
+  ) => {
+    if (!selectedTouchItem) return;
+    const alreadyEquipped = items.find(
+      (i) => i.equippedSlot === slotKey && i.id !== selectedTouchItem.id
+    );
+    if (alreadyEquipped || !acceptedCategories.includes(selectedTouchItem.category)) {
+      return;
+    }
+    setItems((prev) =>
+      prev.map((i) =>
+        i.id === selectedTouchItem.id ? { ...i, equippedSlot: slotKey } : i
+      )
+    );
+    setSelectedTouchItemId(null);
   };
 
   const getCategoryTheme = (cat: SpatialGridItem['category']) => {
@@ -548,14 +616,14 @@ export const SpatialGridInventory: React.FC<SpatialGridInventoryProps> = ({
   const validPlacement = isHoverValid();
 
   return (
-    <div className="bg-bg-card border border-muted-ash/20 rounded-2xl p-6 space-y-6">
+    <div className="bg-bg-card border border-muted-ash/20 rounded-2xl p-3.5 sm:p-6 space-y-5">
       {/* Cabeçalho do Inventário Espacial (Cap. 15 e Cap. 16) */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-muted-ash/15 pb-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-muted-ash/15 pb-4">
         <div>
-          <span className="text-[11px] font-mono uppercase tracking-widest text-secondary-uv">
+          <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-widest text-secondary-uv">
             MOCHILAS, ARMAS & PROTEÇÕES EM GRADE
           </span>
-          <h3 className="text-lg font-extrabold text-text-main mt-0.5">
+          <h3 className="text-base sm:text-lg font-extrabold text-text-main mt-0.5">
             Inventário Espacial ({activeBackpack.name} — {gridCols}×{gridRows})
           </h3>
           <p className="text-xs text-muted-ash">
@@ -563,14 +631,14 @@ export const SpatialGridInventory: React.FC<SpatialGridInventoryProps> = ({
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {/* Seletor das 7 Mochilas Oficiais do Livro */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-mono text-muted-ash">Mochila:</span>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <span className="text-xs font-mono text-muted-ash shrink-0">Mochila:</span>
             <select
               value={selectedBackpackId}
               onChange={(e) => setSelectedBackpackId(e.target.value)}
-              className="bg-bg-main border border-muted-ash/30 rounded-xl px-3 py-2 text-xs font-bold text-text-main focus:outline-none focus:border-secondary-uv"
+              className="flex-1 sm:flex-initial bg-bg-main border border-muted-ash/30 rounded-xl px-3 py-2 text-xs font-bold text-text-main focus:outline-none focus:border-secondary-uv"
             >
               {ANE_BACKPACKS.map((bp) => (
                 <option key={bp.id} value={bp.id}>
@@ -580,18 +648,79 @@ export const SpatialGridInventory: React.FC<SpatialGridInventoryProps> = ({
             </select>
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-muted-ash bg-bg-main px-3 py-2 rounded-xl border border-muted-ash/20">
+          <div className="flex items-center gap-2 text-[11px] text-muted-ash bg-bg-main px-3 py-2 rounded-xl border border-muted-ash/20 w-full sm:w-auto">
             <Info className="w-4 h-4 text-secondary-uv shrink-0" />
             <span>
-              Tecla{' '}
-              <kbd className="px-1.5 py-0.5 rounded bg-bg-card border border-muted-ash/40 font-mono text-text-main">
-                R
-              </kbd>{' '}
-              gira o item 90°.
+              No PC: arraste ou aperte <kbd className="px-1 py-0.5 rounded bg-bg-card border border-muted-ash/40 font-mono text-text-main">R</kbd>. No Celular: <strong>toque no item</strong> e depois no espaço/slot destino.
             </span>
           </div>
         </div>
       </div>
+
+      {/* Barra de Item Selecionado por Toque (Facilita uso no Celular) */}
+      {selectedTouchItem && (
+        <div className="bg-secondary-uv/20 border-2 border-secondary-uv rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div>
+            <span className="text-[10px] font-mono uppercase text-secondary-uv block font-bold">
+              Item Selecionado (Toque em uma célula livre da grade ou em um Slot Equipado)
+            </span>
+            <strong className="text-text-main">{selectedTouchItem.name}</strong>{' '}
+            <span className="text-muted-ash font-mono">
+              ({selectedTouchItem.width}×{selectedTouchItem.height})
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {selectedTouchItem.width !== selectedTouchItem.height &&
+              !selectedTouchItem.equippedSlot && (
+                <button
+                  type="button"
+                  onClick={() => rotatePlacedItem(selectedTouchItem)}
+                  className="px-2.5 py-1.5 rounded-lg bg-bg-main border border-muted-ash/30 text-text-main font-mono text-[11px] flex items-center gap-1"
+                >
+                  <RotateCw className="w-3.5 h-3.5 text-secondary-uv" />
+                  Girar 90°
+                </button>
+              )}
+            {(selectedTouchItem.category === 'water' ||
+              selectedTouchItem.category === 'ration' ||
+              selectedTouchItem.category === 'medical') && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (onConsumeResource) {
+                    onConsumeResource(
+                      selectedTouchItem.category as 'water' | 'ration' | 'medical',
+                      selectedTouchItem
+                    );
+                  }
+                  removeItem(selectedTouchItem.id);
+                }}
+                className="px-2.5 py-1.5 rounded-lg bg-warning-rust text-text-main font-bold text-[11px] flex items-center gap-1"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Consumir
+              </button>
+            )}
+            {onShareItemToChat && (
+              <button
+                type="button"
+                onClick={() => onShareItemToChat(selectedTouchItem)}
+                className="px-2.5 py-1.5 rounded-lg bg-secondary-uv text-text-main font-bold text-[11px] flex items-center gap-1"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                Chat
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setSelectedTouchItemId(null)}
+              className="px-2.5 py-1.5 rounded-lg bg-bg-main text-muted-ash hover:text-text-main text-[11px]"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
         {/* COLUNA ESQUERDA: Slots Equipados no Corpo (Cap. 15.1.3) + Catálogo Oficial (5 cols) */}
@@ -645,6 +774,7 @@ export const SpatialGridInventory: React.FC<SpatialGridInventoryProps> = ({
               return (
                 <div
                   key={slot.key}
+                  onClick={() => handleTouchEquipSlotTap(slot.key, slot.accepts)}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) =>
                     handleDropOnEquipmentSlot(e, slot.key, slot.accepts)
@@ -652,6 +782,8 @@ export const SpatialGridInventory: React.FC<SpatialGridInventoryProps> = ({
                   className={`min-h-[96px] rounded-xl p-3 border-2 border-dashed transition-all flex flex-col justify-between ${
                     equippedItem
                       ? 'bg-bg-main border-secondary-uv shadow-uv-glow'
+                      : selectedTouchItem && slot.accepts.includes(selectedTouchItem.category)
+                      ? 'bg-secondary-uv/15 border-secondary-uv cursor-pointer'
                       : 'bg-bg-main/60 border-muted-ash/25 hover:border-secondary-uv/60'
                   }`}
                 >
@@ -669,9 +801,19 @@ export const SpatialGridInventory: React.FC<SpatialGridInventoryProps> = ({
                   {equippedItem ? (
                     <div
                       draggable
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedTouchItemId(
+                          selectedTouchItemId === equippedItem.id ? null : equippedItem.id
+                        );
+                      }}
                       onDragStart={(e) => handleDragStart(e, equippedItem)}
                       onDragEnd={handleDragEnd}
-                      className="mt-1.5 p-2 rounded-lg bg-bg-card border border-secondary-uv/50 cursor-grab active:cursor-grabbing flex items-center justify-between gap-2"
+                      className={`mt-1.5 p-2 rounded-lg bg-bg-card border cursor-grab active:cursor-grabbing flex items-center justify-between gap-2 ${
+                        selectedTouchItemId === equippedItem.id
+                          ? 'border-2 border-secondary-uv'
+                          : 'border-secondary-uv/50'
+                      }`}
                     >
                       <div className="truncate">
                         <div className="text-xs font-bold text-text-main truncate">
@@ -764,16 +906,16 @@ export const SpatialGridInventory: React.FC<SpatialGridInventoryProps> = ({
           </div>
 
           <div
-            className="relative bg-bg-main/95 border-2 border-muted-ash/30 rounded-xl p-2 shadow-2xl select-none overflow-x-auto"
+            className="w-full max-w-full relative bg-bg-main/95 border-2 border-muted-ash/30 rounded-xl p-2 shadow-2xl select-none overflow-x-auto flex justify-start sm:justify-center"
             onDragLeave={() => setHoverCell(null)}
           >
             <div
-              className="relative grid"
+              className="relative grid shrink-0"
               style={{
-                gridTemplateColumns: `repeat(${gridCols}, ${CELL_SIZE_PX}px)`,
-                gridTemplateRows: `repeat(${gridRows}, ${CELL_SIZE_PX}px)`,
-                width: `${gridCols * CELL_SIZE_PX}px`,
-                height: `${gridRows * CELL_SIZE_PX}px`,
+                gridTemplateColumns: `repeat(${gridCols}, ${responsiveCellSize}px)`,
+                gridTemplateRows: `repeat(${gridRows}, ${responsiveCellSize}px)`,
+                width: `${gridCols * responsiveCellSize}px`,
+                height: `${gridRows * responsiveCellSize}px`,
               }}
             >
               {Array.from({ length: gridRows }).map((_, rowIdx) =>
@@ -790,6 +932,7 @@ export const SpatialGridInventory: React.FC<SpatialGridInventoryProps> = ({
                   return (
                     <div
                       key={`cell-${colIdx}-${rowIdx}`}
+                      onClick={() => handleTouchCellTap(colIdx, rowIdx)}
                       onDragOver={(e) => handleCellDragOver(e, colIdx, rowIdx)}
                       onDrop={(e) => handleCellDrop(e, colIdx, rowIdx)}
                       className={`border border-muted-ash/15 transition-colors flex items-end justify-end p-1 ${
@@ -797,6 +940,8 @@ export const SpatialGridInventory: React.FC<SpatialGridInventoryProps> = ({
                           ? validPlacement
                             ? 'bg-emerald-500/35 border-emerald-400'
                             : 'bg-red-600/40 border-red-400'
+                          : selectedTouchItem
+                          ? 'bg-bg-card/60 hover:bg-secondary-uv/20 cursor-pointer'
                           : 'bg-bg-card/40 hover:bg-bg-card/70'
                       }`}
                     >
@@ -812,22 +957,29 @@ export const SpatialGridInventory: React.FC<SpatialGridInventoryProps> = ({
                 const theme = getCategoryTheme(item.category);
                 const Icon = theme.icon;
                 const isBeingDragged = draggingItem?.id === item.id;
+                const isTouchSelected = selectedTouchItemId === item.id;
 
                 return (
                   <div
                     key={item.id}
                     draggable
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedTouchItemId(isTouchSelected ? null : item.id);
+                    }}
                     onDragStart={(e) => handleDragStart(e, item)}
                     onDragEnd={handleDragEnd}
                     title={item.statsSummary}
                     style={{
-                      left: `${item.x * CELL_SIZE_PX}px`,
-                      top: `${item.y * CELL_SIZE_PX}px`,
-                      width: `${item.width * CELL_SIZE_PX}px`,
-                      height: `${item.height * CELL_SIZE_PX}px`,
+                      left: `${item.x * responsiveCellSize}px`,
+                      top: `${item.y * responsiveCellSize}px`,
+                      width: `${item.width * responsiveCellSize}px`,
+                      height: `${item.height * responsiveCellSize}px`,
                     }}
-                    className={`absolute p-2 rounded-lg border-2 backdrop-blur-sm cursor-grab active:cursor-grabbing flex flex-col justify-between transition-transform group ${
+                    className={`absolute p-1.5 sm:p-2 rounded-lg border-2 backdrop-blur-sm cursor-grab active:cursor-grabbing flex flex-col justify-between transition-transform group ${
                       theme.bg
+                    } ${
+                      isTouchSelected ? 'ring-2 ring-white z-30' : ''
                     } ${isBeingDragged ? 'opacity-35 scale-95' : 'opacity-100 hover:z-20'}`}
                   >
                     <div className="flex items-start justify-between gap-1">

@@ -511,10 +511,10 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 w-full lg:w-auto">
           {/* Ingressar via Código */}
-          <form onSubmit={handleJoin} className="flex items-center gap-2">
-            <div className="relative">
+          <form onSubmit={handleJoin} className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-1 sm:flex-initial">
               <KeyRound className="w-4 h-4 text-muted-ash absolute left-3 top-2.5" />
               <input
                 type="text"
@@ -522,12 +522,12 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({
                 value={inviteCode}
                 onChange={(e) => setInviteCode(e.target.value)}
                 placeholder="Código de Convite"
-                className="bg-bg-main border border-muted-ash/30 rounded-lg pl-9 pr-3 py-2 text-xs font-mono uppercase text-text-main placeholder:text-muted-ash/50 focus:outline-none focus:border-secondary-uv w-44"
+                className="bg-bg-main border border-muted-ash/30 rounded-lg pl-9 pr-3 py-2 text-xs font-mono uppercase text-text-main placeholder:text-muted-ash/50 focus:outline-none focus:border-secondary-uv w-full sm:w-44"
               />
             </div>
             <button
               type="submit"
-              className="px-3.5 py-2 rounded-lg bg-secondary-uv hover:bg-secondary-uv/90 text-text-main text-xs font-semibold transition-all shadow-uv-glow"
+              className="px-3.5 py-2 rounded-lg bg-secondary-uv hover:bg-secondary-uv/90 text-text-main text-xs font-semibold transition-all shadow-uv-glow shrink-0"
             >
               Entrar como Player
             </button>
@@ -535,7 +535,7 @@ export const CampaignsView: React.FC<CampaignsViewProps> = ({
 
           <button
             onClick={() => setIsCreatingCamp((v) => !v)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-blood hover:bg-primary-blood/90 text-text-main text-xs font-semibold transition-all shadow-blood-glow"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary-blood hover:bg-primary-blood/90 text-text-main text-xs font-semibold transition-all shadow-blood-glow"
           >
             <Plus className="w-4 h-4" />
             Criar Campanha (Mestre)

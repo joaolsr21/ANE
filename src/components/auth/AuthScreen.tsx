@@ -82,49 +82,49 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSignIn, onSignUp }) =>
       />
 
       {/* TOPBAR PÚBLICA COM OPÇÃO DE LOGIN / CRIAR CONTA NO CANTO */}
-      <header className="sticky top-0 z-30 bg-bg-card/85 backdrop-blur-md border-b border-muted-ash/15 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary-blood/20 border border-primary-blood flex items-center justify-center shadow-blood-glow">
-              <Skull className="w-6 h-6 text-primary-blood" />
+      <header className="sticky top-0 z-30 bg-bg-card/90 backdrop-blur-md border-b border-muted-ash/15 px-3.5 sm:px-6 py-3 sm:py-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary-blood/20 border border-primary-blood flex items-center justify-center shadow-blood-glow shrink-0">
+              <Skull className="w-5 h-5 sm:w-6 sm:h-6 text-primary-blood" />
             </div>
-            <div>
-              <h1 className="font-extrabold tracking-wider uppercase text-sm sm:text-base text-text-main">
+            <div className="min-w-0">
+              <h1 className="font-extrabold tracking-wider uppercase text-xs sm:text-base text-text-main truncate">
                 ANE <span className="text-primary-blood">//</span> A Noite Eterna
               </h1>
-              <span className="text-[11px] font-mono text-muted-ash flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-secondary-uv animate-pulse" />
-                SISTEMA OFICIAL DE RPG DE SOBREVIVÊNCIA & HORROR
+              <span className="text-[9px] sm:text-[11px] font-mono text-muted-ash flex items-center gap-1.5 truncate">
+                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-secondary-uv animate-pulse shrink-0" />
+                RPG DE SOBREVIVÊNCIA & HORROR
               </span>
             </div>
           </div>
 
           {/* Botões no canto superior direito para Entrar / Criar Conta */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             <button
               type="button"
               onClick={() => openModalWithMode('login')}
-              className="px-4 py-2 rounded-xl bg-bg-main hover:bg-bg-main/80 border border-muted-ash/30 hover:border-secondary-uv text-xs font-bold uppercase tracking-wider text-text-main flex items-center gap-2 transition-all"
+              className="px-2.5 sm:px-4 py-2 rounded-xl bg-bg-main hover:bg-bg-main/80 border border-muted-ash/30 hover:border-secondary-uv text-[11px] sm:text-xs font-bold uppercase tracking-wider text-text-main flex items-center gap-1.5 transition-all"
             >
-              <LogIn className="w-4 h-4 text-secondary-uv" />
-              Entrar
+              <LogIn className="w-3.5 h-3.5 text-secondary-uv" />
+              <span>Entrar</span>
             </button>
             <button
               type="button"
               onClick={() => openModalWithMode('signup')}
-              className="px-4 py-2 rounded-xl bg-primary-blood hover:bg-primary-blood/90 text-xs font-bold uppercase tracking-wider text-text-main flex items-center gap-2 shadow-blood-glow transition-all"
+              className="px-2.5 sm:px-4 py-2 rounded-xl bg-primary-blood hover:bg-primary-blood/90 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-text-main flex items-center gap-1.5 shadow-blood-glow transition-all"
             >
-              <UserPlus className="w-4 h-4" />
-              Criar Conta
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>Criar Conta</span>
             </button>
           </div>
         </div>
       </header>
 
       {/* CONTEÚDO DA ABA INICIAL (APRESENTAÇÃO DO RPG ANTES DO LOGIN) */}
-      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-6 py-10 space-y-12">
+      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-3.5 sm:px-6 py-6 sm:py-10 space-y-8 sm:space-y-12">
         {/* HERO SECTION */}
-        <section className="bg-bg-card/90 border border-muted-ash/20 rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden">
+        <section className="bg-bg-card/90 border border-muted-ash/20 rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-12 shadow-2xl relative overflow-hidden">
           <div className="max-w-3xl space-y-5">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary-uv/20 border border-secondary-uv/50 text-xs font-mono uppercase tracking-widest text-text-main">
               <Sparkles className="w-3.5 h-3.5 text-secondary-uv" />

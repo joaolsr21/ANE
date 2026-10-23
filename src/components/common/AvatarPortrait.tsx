@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Camera, Link2, Trash2, User, Skull, Check, X } from 'lucide-react';
+import { Camera, Link2, Trash2, User, Skull, Check, X, Pencil } from 'lucide-react';
 
 interface AvatarPortraitProps {
   imageUrl: string | null;
@@ -20,13 +20,14 @@ export const AvatarPortrait: React.FC<AvatarPortraitProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [showUrlPopover, setShowUrlPopover] = useState(false);
+  const [touchActionsOpen, setTouchActionsOpen] = useState(false);
   const [urlInput, setUrlInput] = useState(imageUrl || '');
 
   const sizeClasses = {
     sm: 'w-10 h-10 text-xs',
     md: 'w-14 h-14 text-sm',
-    lg: 'w-20 h-20 text-lg',
-    xl: 'w-28 h-28 text-2xl',
+    lg: 'w-16 h-16 sm:w-20 sm:h-20 text-lg',
+    xl: 'w-24 h-24 sm:w-28 sm:h-28 text-2xl',
   }[size];
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -37,6 +38,7 @@ export const AvatarPortrait: React.FC<AvatarPortraitProps> = ({
     reader.onload = () => {
       if (typeof reader.result === 'string') {
         onChangeImage(reader.result);
+        setTouchActionsOpen(false);
       }
     };
     reader.readAsDataURL(file);
@@ -47,6 +49,7 @@ export const AvatarPortrait: React.FC<AvatarPortraitProps> = ({
     if (!onChangeImage) return;
     onChangeImage(urlInput.trim() || null);
     setShowUrlPopover(false);
+    setTouchActionsOpen(false);
   };
 
   return (
@@ -77,11 +80,15 @@ export const AvatarPortrait: React.FC<AvatarPortraitProps> = ({
           </div>
         )}
 
-        {/* Overlay de Edição de Foto (Adicionar / Alterar / Excluir) */}
+        {/* Overlay de Edição de Foto (Visível ao passar o mouse no PC ou ao tocar no botão de câmera no Celular) */}
         {editable && onChangeImage && (
           <div
             onClick={(e) => e.stopPropagation()}
-            className="absolute inset-0 bg-bg-main/85 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 p-1"
+            className={`absolute inset-0 bg-bg-main/90 transition-opacity flex items-center justify-center gap-1 p-1 ${
+              touchActionsOpen
+                ? 'opacity-100 pointer-events-auto'
+                : 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto'
+            }`}
           >
             <input
               ref={fileInputRef}
@@ -114,7 +121,10 @@ export const AvatarPortrait: React.FC<AvatarPortraitProps> = ({
             {imageUrl && (
               <button
                 type="button"
-                onClick={() => onChangeImage(null)}
+                onClick={() => {
+                  onChangeImage(null);
+                  setTouchActionsOpen(false);
+                }}
                 title="Excluir foto"
                 className="p-1.5 rounded-lg bg-primary-blood text-text-main hover:bg-primary-blood/80"
               >
@@ -125,31 +135,46 @@ export const AvatarPortrait: React.FC<AvatarPortraitProps> = ({
         )}
       </div>
 
+      {/* Botão flutuante no canto inferior direito para abrir opções no Celular (Touch) */}
+      {editable && onChangeImage && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setTouchActionsOpen((v) => !v);
+          }}
+          title="Editar foto"
+          className="md:hidden absolute -bottom-1 -right-1 z-20 w-6 h-6 rounded-full bg-secondary-uv border border-bg-main text-text-main flex items-center justify-center shadow-lg"
+        >
+          {touchActionsOpen ? <X className="w-3 h-3" /> : <Pencil className="w-3 h-3" />}
+        </button>
+      )}
+
       {/* Popover para colar URL de imagem */}
       {showUrlPopover && onChangeImage && (
         <form
           onSubmit={handleApplyUrl}
           onClick={(e) => e.stopPropagation()}
-          className="absolute z-40 top-full left-0 mt-2 w-64 bg-bg-card border border-secondary-uv rounded-xl p-2.5 shadow-2xl flex items-center gap-1.5"
+          className="absolute z-50 top-full left-0 mt-2 w-60 sm:w-64 bg-bg-card border border-secondary-uv rounded-xl p-2.5 shadow-2xl flex items-center gap-1.5"
         >
           <input
             type="url"
             value={urlInput}
             onChange={(e) => setUrlInput(e.target.value)}
             placeholder="https://exemplo.com/foto.jpg"
-            className="flex-1 bg-bg-main border border-muted-ash/30 rounded-lg px-2.5 py-1 text-xs text-text-main focus:outline-none focus:border-secondary-uv"
+            className="flex-1 min-w-0 bg-bg-main border border-muted-ash/30 rounded-lg px-2.5 py-1 text-xs text-text-main focus:outline-none focus:border-secondary-uv"
           />
           <button
             type="submit"
             title="Salvar URL"
-            className="p-1.5 rounded-lg bg-secondary-uv text-text-main"
+            className="p-1.5 rounded-lg bg-secondary-uv text-text-main shrink-0"
           >
             <Check className="w-3.5 h-3.5" />
           </button>
           <button
             type="button"
             onClick={() => setShowUrlPopover(false)}
-            className="p-1.5 rounded-lg bg-bg-main text-muted-ash hover:text-text-main"
+            className="p-1.5 rounded-lg bg-bg-main text-muted-ash hover:text-text-main shrink-0"
           >
             <X className="w-3.5 h-3.5" />
           </button>

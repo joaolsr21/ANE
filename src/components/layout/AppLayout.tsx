@@ -33,10 +33,17 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 }) => {
   const displayName = profile?.username || userEmail?.split('@')[0] || 'Operador';
 
+  const navItems: Array<{ id: ANETab; label: string; shortLabel: string; icon: any; isUv?: boolean }> = [
+    { id: 'resumo', label: 'Resumo', shortLabel: 'Resumo', icon: Compass },
+    { id: 'campanhas', label: 'Campanhas', shortLabel: 'Campanhas', icon: FolderKanban },
+    { id: 'fichas', label: 'Personagens', shortLabel: 'Personagens', icon: Users },
+    { id: 'dados', label: 'Rolador de Dados', shortLabel: 'Dados', icon: Dices, isUv: true },
+  ];
+
   return (
-    <div className="min-h-screen bg-bg-main text-text-main flex flex-col md:flex-row">
-      {/* Sidebar Lateral (Asfalto Úmido #1A1A24) */}
-      <aside className="w-full md:w-64 bg-bg-card border-b md:border-b-0 md:border-r border-muted-ash/15 flex flex-col justify-between shrink-0">
+    <div className="min-h-screen bg-bg-main text-text-main flex flex-col md:flex-row overflow-x-hidden">
+      {/* Sidebar Lateral — Visível apenas em Desktop/Tablet (md+) */}
+      <aside className="hidden md:flex md:w-64 bg-bg-card border-r border-muted-ash/15 flex-col justify-between shrink-0 sticky top-0 h-screen">
         <div>
           {/* Brand Header */}
           <div className="p-5 border-b border-muted-ash/15 flex items-center justify-between">
@@ -58,55 +65,26 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
           {/* Menu de Navegação Principal: 4 Abas Dedicadas */}
           <nav className="p-3 space-y-1.5">
-            <button
-              onClick={() => onTabChange('resumo')}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                activeTab === 'resumo'
-                  ? 'bg-primary-blood text-text-main shadow-blood-glow'
-                  : 'text-muted-ash hover:bg-bg-main/60 hover:text-text-main'
-              }`}
-            >
-              <Compass className="w-4 h-4" />
-              Resumo
-            </button>
-
-            <button
-              onClick={() => onTabChange('campanhas')}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                activeTab === 'campanhas'
-                  ? 'bg-primary-blood text-text-main shadow-blood-glow'
-                  : 'text-muted-ash hover:bg-bg-main/60 hover:text-text-main'
-              }`}
-            >
-              <FolderKanban className="w-4 h-4" />
-              Campanhas
-            </button>
-
-            <button
-              onClick={() => onTabChange('fichas')}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                activeTab === 'fichas'
-                  ? 'bg-primary-blood text-text-main shadow-blood-glow'
-                  : 'text-muted-ash hover:bg-bg-main/60 hover:text-text-main'
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              Personagens
-            </button>
-
-            <button
-              onClick={() => onTabChange('dados')}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                activeTab === 'dados'
-                  ? 'bg-secondary-uv text-text-main shadow-uv-glow'
-                  : 'text-muted-ash hover:bg-bg-main/60 hover:text-text-main'
-              }`}
-            >
-              <span className="flex items-center gap-3">
-                <Dices className="w-4 h-4" />
-                Rolador de Dados
-              </span>
-            </button>
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => onTabChange(item.id)}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    isActive
+                      ? item.isUv
+                        ? 'bg-secondary-uv text-text-main shadow-uv-glow'
+                        : 'bg-primary-blood text-text-main shadow-blood-glow'
+                      : 'text-muted-ash hover:bg-bg-main/60 hover:text-text-main'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {item.label}
+                </button>
+              );
+            })}
           </nav>
 
           {/* Indicador de Permissão */}
@@ -148,21 +126,34 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
       </aside>
 
       {/* Área Principal */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Topbar de Status */}
-        <header className="h-16 bg-bg-card/80 backdrop-blur-md border-b border-muted-ash/15 px-6 flex items-center justify-between sticky top-0 z-10">
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-muted-ash">
+      <div className="flex-1 flex flex-col min-w-0 pb-20 md:pb-0">
+        {/* Topbar de Status (Adaptada para Celular e Desktop) */}
+        <header className="h-14 md:h-16 bg-bg-card/90 backdrop-blur-md border-b border-muted-ash/15 px-3.5 md:px-6 flex items-center justify-between sticky top-0 z-30">
+          {/* No celular mostra a logo ANE compacta; no desktop mostra o status */}
+          <div className="flex items-center gap-2.5">
+            <div className="flex md:hidden w-8 h-8 rounded-lg bg-primary-blood/20 border border-primary-blood items-center justify-center">
+              <Skull className="w-4 h-4 text-primary-blood" />
+            </div>
+            <div className="md:hidden">
+              <span className="font-extrabold tracking-wider uppercase text-xs text-text-main block">
+                ANE <span className="text-primary-blood">//</span> A Noite Eterna
+              </span>
+              <span className="text-[10px] font-mono text-muted-ash truncate block max-w-[140px]">
+                {displayName}
+              </span>
+            </div>
+
+            <span className="hidden md:flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-muted-ash">
               <Radio className="w-4 h-4 text-secondary-uv" />
               Sistema ANE: <strong className="text-text-main">Operacional</strong>
             </span>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="hidden sm:flex items-center gap-3 text-xs font-mono">
+          <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2.5 text-xs font-mono">
               <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-primary-blood/20 border border-primary-blood/50 text-text-main">
                 <Activity className="w-3.5 h-3.5 text-primary-blood" />
-                Infecção / PV / Monstros
+                Infecção / PV
               </span>
               <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-warning-rust/20 border border-warning-rust/50 text-text-main">
                 SAN / Fome / Sede
@@ -171,12 +162,54 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                 Dados & Testes
               </span>
             </div>
+
+            {/* Botão Sair visível no topo em telas mobile */}
+            <button
+              onClick={onSignOut}
+              title="Sair da Conta"
+              className="md:hidden px-2.5 py-1.5 rounded-lg bg-bg-main border border-muted-ash/25 text-muted-ash hover:text-primary-blood flex items-center gap-1 text-xs font-mono"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sair</span>
+            </button>
           </div>
         </header>
 
-        {/* Conteúdo Dinâmico */}
-        <main className="flex-1 p-6 max-w-7xl w-full mx-auto">{children}</main>
+        {/* Conteúdo Dinâmico com padding otimizado para celular */}
+        <main className="flex-1 p-3 sm:p-5 md:p-6 max-w-7xl w-full mx-auto">
+          {children}
+        </main>
       </div>
+
+      {/* BARRA DE NAVEGAÇÃO INFERIOR FIXA PARA CELULAR (Mobile Bottom Tab Bar) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-bg-card/95 backdrop-blur-lg border-t border-muted-ash/25 px-2 py-1.5 grid grid-cols-4 gap-1 shadow-2xl">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = activeTab === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => {
+                onTabChange(item.id);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-all ${
+                isActive
+                  ? item.isUv
+                    ? 'bg-secondary-uv text-text-main shadow-uv-glow'
+                    : 'bg-primary-blood text-text-main shadow-blood-glow'
+                  : 'text-muted-ash hover:text-text-main'
+              }`}
+            >
+              <Icon className="w-4 h-4 mb-0.5" />
+              <span className="text-[10px] font-bold tracking-tight truncate max-w-full">
+                {item.shortLabel}
+              </span>
+            </button>
+          );
+        })}
+      </nav>
     </div>
   );
 };

@@ -78,7 +78,7 @@ export const CampaignChatFeed: React.FC<CampaignChatFeedProps> = ({
       : entries.filter((e) => e.type === filterType);
 
   return (
-    <div className="bg-bg-card border border-muted-ash/25 rounded-2xl flex flex-col h-[640px] shadow-2xl overflow-hidden">
+    <div className="bg-bg-card border border-muted-ash/25 rounded-2xl flex flex-col h-[480px] sm:h-[640px] shadow-2xl overflow-hidden">
       {/* Cabeçalho do Chat da Campanha */}
       <div className="p-4 bg-bg-main/90 border-b border-muted-ash/15 space-y-2.5">
         <div className="flex items-center justify-between">
