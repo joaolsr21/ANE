@@ -1,102 +1,14 @@
 import { useState, useMemo, useCallback } from 'react';
 import { AttributeKey } from './useDiceRoller';
+import {
+  ALL_ANE_SKILLS,
+  ANE_ORIGINS,
+  OriginOption,
+  SkillDefinition,
+} from '../data/aneSystemRules';
 
-export interface OriginOption {
-  id: string;
-  title: string;
-  subtitle: string;
-  abilityName: string;
-  abilityDescription: string;
-  grantedSkills: [string, string, string, string];
-}
-
-export const ANE_ORIGINS: OriginOption[] = [
-  {
-    id: 'agente-saude',
-    title: 'Agente de Saúde',
-    subtitle: 'Médico socorrista, enfermeiro de triagem ou virologista de campo.',
-    abilityName: 'Protocolo de Triagem',
-    abilityDescription:
-      'Ao usar Medicina para estabilizar ou tratar um aliado, você recupera +1d6 PV adicional e reduz o avanço de Infecção em 5%.',
-    grantedSkills: ['Medicina', 'Ciencias', 'Intuicao', 'Vontade'],
-  },
-  {
-    id: 'policial',
-    title: 'Policial / Força Tática',
-    subtitle: 'Patrulheiro urbano ou operador de contenção acostumado ao caos.',
-    abilityName: 'Fogo de Supressão',
-    abilityDescription:
-      'Você recebe +2 em testes de Pontaria com armas de fogo curtas e +1 na Iniciativa durante emboscadas.',
-    grantedSkills: ['Pontaria', 'Tatica', 'Percepcao', 'Intimidacao'],
-  },
-  {
-    id: 'estudante',
-    title: 'Estudante / Pesquisador',
-    subtitle: 'Jovem universitário com mente analítica e rápida adaptação.',
-    abilityName: 'Improviso Acadêmico',
-    abilityDescription:
-      'Uma vez por cena, você pode usar Intelecto (INT) no lugar de outro atributo em um teste de perícia não-combate.',
-    grantedSkills: ['Investigacao', 'Tecnologia', 'Atualidades', 'Furtividade'],
-  },
-  {
-    id: 'bombeiro',
-    title: 'Bombeiro / Resgate',
-    subtitle: 'Especialista em ambientes colapsados, fumaça tóxica e combate corpo a corpo.',
-    abilityName: 'Fôlego de Cinzas',
-    abilityDescription:
-      'Você ignora o primeiro nível de Fadiga e recebe +2 em testes para arrombar portas ou carregar sobreviventes.',
-    grantedSkills: ['Atletismo', 'Luta', 'Fortitude', 'Sobrevivencia'],
-  },
-  {
-    id: 'engenheiro',
-    title: 'Mecânico / Engenheiro',
-    subtitle: 'Manutenção de geradores UV, barricadas e veículos blindados.',
-    abilityName: 'Sobrecarga Ultravioleta',
-    abilityDescription:
-      'Seus equipamentos improvisados e lanternas UV têm alcance ampliado e nunca falham no primeiro uso da cena.',
-    grantedSkills: ['Tecnologia', 'Profissao', 'Percepcao', 'Reflexos'],
-  },
-  {
-    id: 'criminoso',
-    title: 'Sobrevivente do Submundo',
-    subtitle: 'Contrabandista de zonas de quarentena e especialista em rotas furtivas.',
-    abilityName: 'Sombra do Asfalto',
-    abilityDescription:
-      'Você não sofre penalidade de movimento ao agir furtivamente e recebe +2 para ocultar itens pequenos.',
-    grantedSkills: ['Crime', 'Furtividade', 'Enganacao', 'Reflexos'],
-  },
-];
-
-export interface SkillDefinition {
-  key: string;
-  label: string;
-  attr: AttributeKey;
-}
-
-export const ALL_ANE_SKILLS: SkillDefinition[] = [
-  { key: 'Atletismo', label: 'Atletismo', attr: 'FOR' },
-  { key: 'Luta', label: 'Luta', attr: 'FOR' },
-  { key: 'Furtividade', label: 'Furtividade', attr: 'AGI' },
-  { key: 'Pontaria', label: 'Pontaria', attr: 'AGI' },
-  { key: 'Reflexos', label: 'Reflexos', attr: 'AGI' },
-  { key: 'Crime', label: 'Crime', attr: 'AGI' },
-  { key: 'Pilotagem', label: 'Pilotagem', attr: 'AGI' },
-  { key: 'Medicina', label: 'Medicina', attr: 'INT' },
-  { key: 'Investigacao', label: 'Investigação', attr: 'INT' },
-  { key: 'Tecnologia', label: 'Tecnologia', attr: 'INT' },
-  { key: 'Sobrevivencia', label: 'Sobrevivência', attr: 'INT' },
-  { key: 'Ciencias', label: 'Ciências', attr: 'INT' },
-  { key: 'Tatica', label: 'Tática', attr: 'INT' },
-  { key: 'Atualidades', label: 'Atualidades', attr: 'INT' },
-  { key: 'Profissao', label: 'Profissão', attr: 'INT' },
-  { key: 'Percepcao', label: 'Percepção', attr: 'PRE' },
-  { key: 'Vontade', label: 'Vontade', attr: 'PRE' },
-  { key: 'Intuicao', label: 'Intuição', attr: 'PRE' },
-  { key: 'Intimidacao', label: 'Intimidação', attr: 'PRE' },
-  { key: 'Diplomacia', label: 'Diplomacia', attr: 'PRE' },
-  { key: 'Enganacao', label: 'Enganação', attr: 'PRE' },
-  { key: 'Fortitude', label: 'Fortitude', attr: 'VIG' },
-];
+export { ALL_ANE_SKILLS, ANE_ORIGINS };
+export type { OriginOption, SkillDefinition };
 
 export interface CharacterIdentityState {
   name: string;
@@ -149,18 +61,19 @@ export function useCharacterCreator() {
   // Passo 1: Identidade
   const [identity, setIdentity] = useState<CharacterIdentityState>({
     name: '',
-    age: '26',
+    age: '29',
     concept: '',
     backstory: '',
   });
 
-  // Passo 2: Origem
+  // Passo 2: Origem + Escolhas de Perícias da Origem (ex: "escolha 2 entre...")
   const [selectedOriginId, setSelectedOriginId] = useState<string | null>(null);
+  const [originChosenSkills, setOriginChosenSkills] = useState<string[]>([]);
 
   // Passo 3: Atributos (Todos começam em 1, máx 3 na criação, 6 pontos extras)
   const [attributes, setAttributes] = useState<AttributesState>(INITIAL_ATTRIBUTES);
 
-  // Passo 4: Perícias escolhidas manualmente
+  // Passo 4: Perícias adicionais (2 + INT atual)
   const [selectedExtraSkills, setSelectedExtraSkills] = useState<string[]>([]);
 
   const selectedOrigin = useMemo(
@@ -184,11 +97,11 @@ export function useCharacterCreator() {
   // Quantidade de perícias adicionais permitidas: 2 + INT atual
   const maxExtraSkillsAllowed = 2 + attributes.INT;
 
-  // Perícias bloqueadas/concedidas pela Origem
-  const originGrantedSkills = useMemo<string[]>(
-    () => (selectedOrigin ? [...selectedOrigin.grantedSkills] : []),
-    [selectedOrigin]
-  );
+  // As 4 perícias da Origem = fixedSkills + originChosenSkills
+  const originGrantedSkills = useMemo<string[]>(() => {
+    if (!selectedOrigin) return [];
+    return [...selectedOrigin.fixedSkills, ...originChosenSkills];
+  }, [selectedOrigin, originChosenSkills]);
 
   // Estatísticas Derivadas calculadas em tempo real
   const derivedStats = useMemo<DerivedStats>(
@@ -196,52 +109,81 @@ export function useCharacterCreator() {
     [attributes]
   );
 
-  // Alterar um atributo respeitando [1..3] e o limite de 6 pontos
-  const updateAttribute = useCallback(
-    (key: AttributeKey, delta: 1 | -1) => {
-      setAttributes((prev) => {
-        const currentVal = prev[key];
-        const nextVal = currentVal + delta;
+  const updateAttribute = useCallback((key: AttributeKey, delta: 1 | -1) => {
+    setAttributes((prev) => {
+      const currentVal = prev[key];
+      const nextVal = currentVal + delta;
 
-        if (nextVal < MIN_ATTR_CREATION || nextVal > MAX_ATTR_CREATION) {
-          return prev;
-        }
+      if (nextVal < MIN_ATTR_CREATION || nextVal > MAX_ATTR_CREATION) {
+        return prev;
+      }
 
-        const currentSpent =
-          prev.FOR + prev.AGI + prev.INT + prev.PRE + prev.VIG - 5;
-        if (delta > 0 && currentSpent >= TOTAL_DISTRIBUTABLE_POINTS) {
-          return prev;
-        }
+      const currentSpent =
+        prev.FOR + prev.AGI + prev.INT + prev.PRE + prev.VIG - 5;
+      if (delta > 0 && currentSpent >= TOTAL_DISTRIBUTABLE_POINTS) {
+        return prev;
+      }
 
-        const updated = { ...prev, [key]: nextVal };
+      const updated = { ...prev, [key]: nextVal };
 
-        // Se o jogador reduziu INT, trunca perícias extras excedentes caso necessário
-        if (key === 'INT' && delta < 0) {
-          const newLimit = 2 + nextVal;
-          setSelectedExtraSkills((skills) => skills.slice(0, newLimit));
-        }
+      if (key === 'INT' && delta < 0) {
+        const newLimit = 2 + nextVal;
+        setSelectedExtraSkills((skills) => skills.slice(0, newLimit));
+      }
 
-        return updated;
-      });
-    },
-    []
-  );
+      return updated;
+    });
+  }, []);
 
-  // Selecionar Origem e remover eventuais conflitos nas perícias extras
+  // Selecionar Origem e pré-selecionar as escolhas padrão daquela Origem
   const selectOrigin = useCallback((originId: string) => {
     setSelectedOriginId(originId);
     const originObj = ANE_ORIGINS.find((o) => o.id === originId);
     if (originObj) {
+      const autoChoices = originObj.choicePool
+        .filter((sk) => !originObj.fixedSkills.includes(sk))
+        .slice(0, originObj.choiceCount);
+      setOriginChosenSkills(autoChoices);
+
+      const allOriginSkills = [...originObj.fixedSkills, ...autoChoices];
       setSelectedExtraSkills((prev) =>
-        prev.filter((sk) => !originObj.grantedSkills.includes(sk))
+        prev.filter((sk) => !allOriginSkills.includes(sk))
       );
+    } else {
+      setOriginChosenSkills([]);
     }
   }, []);
 
-  // Alternar perícia extra no Passo 4
+  // Alternar uma das perícias de escolha da própria Origem (ex: escolha 2 entre...)
+  const toggleOriginChoiceSkill = useCallback(
+    (skillKey: string) => {
+      if (!selectedOrigin) return;
+      if (selectedOrigin.fixedSkills.includes(skillKey)) return;
+
+      setOriginChosenSkills((prev) => {
+        let next: string[];
+        if (prev.includes(skillKey)) {
+          next = prev.filter((k) => k !== skillKey);
+        } else {
+          if (prev.length >= selectedOrigin.choiceCount) {
+            // Substitui a primeira escolha para facilitar UX
+            next = [...prev.slice(1), skillKey];
+          } else {
+            next = [...prev, skillKey];
+          }
+        }
+        // Garante que nenhuma perícia da origem fique duplicada nas perícias extras
+        setSelectedExtraSkills((extra) => extra.filter((k) => !next.includes(k)));
+        return next;
+      });
+    },
+    [selectedOrigin]
+  );
+
+  // Alternar perícia extra no Passo 4 (2 + INT)
   const toggleExtraSkill = useCallback(
     (skillKey: string) => {
-      if (originGrantedSkills.includes(skillKey)) return; // Já concedida pela origem
+      if (originGrantedSkills.includes(skillKey)) return;
 
       setSelectedExtraSkills((prev) => {
         if (prev.includes(skillKey)) {
@@ -263,7 +205,10 @@ export function useCharacterCreator() {
         case 1:
           return identity.name.trim().length >= 2 && identity.concept.trim().length >= 2;
         case 2:
-          return Boolean(selectedOrigin);
+          return Boolean(
+            selectedOrigin &&
+              originChosenSkills.length === selectedOrigin.choiceCount
+          );
         case 3:
           return pointsRemaining === 0;
         case 4:
@@ -274,13 +219,21 @@ export function useCharacterCreator() {
           return false;
       }
     },
-    [identity, selectedOrigin, pointsRemaining, selectedExtraSkills.length, maxExtraSkillsAllowed]
+    [
+      identity,
+      selectedOrigin,
+      originChosenSkills.length,
+      pointsRemaining,
+      selectedExtraSkills.length,
+      maxExtraSkillsAllowed,
+    ]
   );
 
   const resetWizard = useCallback(() => {
     setCurrentStep(1);
-    setIdentity({ name: '', age: '26', concept: '', backstory: '' });
+    setIdentity({ name: '', age: '29', concept: '', backstory: '' });
     setSelectedOriginId(null);
+    setOriginChosenSkills([]);
     setAttributes(INITIAL_ATTRIBUTES);
     setSelectedExtraSkills([]);
   }, []);
@@ -292,6 +245,8 @@ export function useCharacterCreator() {
     setIdentity,
     selectedOrigin,
     selectOrigin,
+    originChosenSkills,
+    toggleOriginChoiceSkill,
     attributes,
     updateAttribute,
     pointsSpent,

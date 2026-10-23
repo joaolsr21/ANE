@@ -69,7 +69,7 @@ const ATTRIBUTE_DESCRIPTIONS: Record<
   },
   INT: {
     name: 'Intelecto',
-    desc: 'Raciocínio, Medicina, Tecnologia e Perícias extras na criação (2 + INT).',
+    desc: 'Raciocínio, Medicina, Mecânica e Perícias extras na criação (2 + INT).',
   },
   PRE: {
     name: 'Presença',
@@ -93,6 +93,8 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
     setIdentity,
     selectedOrigin,
     selectOrigin,
+    originChosenSkills,
+    toggleOriginChoiceSkill,
     attributes,
     updateAttribute,
     pointsRemaining,
@@ -105,6 +107,7 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
     resetWizard,
   } = useCharacterCreator();
 
+  const [originSearch, setOriginSearch] = React.useState('');
   const [selectedCampaignId, setSelectedCampaignId] = React.useState<string>(
     campaigns[0]?.id || ''
   );
@@ -115,7 +118,6 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
     setSubmitting(true);
 
     try {
-      // Monta mapa de perícias: Todas as 4 da origem + as escolhidas recebem grau Treinado (1 -> +2)
       const finalSkills: Record<string, SkillRank> = {};
       ALL_ANE_SKILLS.forEach((sk) => {
         const isTrained =
@@ -126,7 +128,7 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
 
       await onCompleteCreation({
         name: identity.name.trim(),
-        archetype: `${selectedOrigin.title} • ${identity.concept.trim()}`,
+        archetype: `${selectedOrigin.title} (${selectedOrigin.abilityName}) • ${identity.concept.trim()}`,
         campaign_id: selectedCampaignId || null,
         is_npc: false,
         pv_max: derivedStats.pv,
@@ -155,7 +157,7 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
         <div className="flex items-center justify-between mb-4">
           <div>
             <span className="text-[11px] font-mono uppercase tracking-widest text-secondary-uv">
-              PROTOCOLO DE CRIAÇÃO // ESTILO CRIS
+              PROTOCOLO DE CRIAÇÃO OFICIAL // CAPÍTULO 03
             </span>
             <h2 className="text-xl font-extrabold text-text-main">
               Novo Sobrevivente: Passo {currentStep} de 5
@@ -227,17 +229,17 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
           <div className="max-w-3xl mx-auto space-y-5">
             <div>
               <h3 className="text-lg font-bold text-text-main">
-                1. Identidade do Sobrevivente
+                1. Quem Você Era & Conceito (Cap. 3.1 e 3.2)
               </h3>
               <p className="text-xs text-muted-ash">
-                Quem você era antes da Noite Eterna cair sobre o mundo?
+                Quem era seu Sobrevivente antes do colapso e quem ele está tentando ser agora?
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
               <div className="sm:col-span-8">
                 <label className="block text-xs font-medium text-muted-ash mb-1.5">
-                  Nome Completo ou Codinome *
+                  Nome do Sobrevivente *
                 </label>
                 <input
                   type="text"
@@ -245,7 +247,7 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
                   onChange={(e) =>
                     setIdentity((prev) => ({ ...prev, name: e.target.value }))
                   }
-                  placeholder="Ex: Dra. Helena Vance"
+                  placeholder="Ex: Camila Ferreira"
                   className="w-full bg-bg-main border border-muted-ash/30 rounded-xl px-4 py-2.5 text-sm text-text-main focus:outline-none focus:border-secondary-uv"
                 />
               </div>
@@ -269,7 +271,7 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
 
             <div>
               <label className="block text-xs font-medium text-muted-ash mb-1.5">
-                Conceito do Personagem *
+                Conceito do Sobrevivente (Uma frase curta) *
               </label>
               <input
                 type="text"
@@ -277,14 +279,14 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
                 onChange={(e) =>
                   setIdentity((prev) => ({ ...prev, concept: e.target.value }))
                 }
-                placeholder="Ex: Virologista assombrada pelo Paciente Zero"
+                placeholder="Ex: Profissional de saúde procurando o irmão desaparecido"
                 className="w-full bg-bg-main border border-muted-ash/30 rounded-xl px-4 py-2.5 text-sm text-text-main focus:outline-none focus:border-secondary-uv"
               />
             </div>
 
             <div>
               <label className="block text-xs font-medium text-muted-ash mb-1.5">
-                Histórico & Cicatrizes (Backstory)
+                Personalidade, Aparência, Objetivos & Relações
               </label>
               <textarea
                 rows={4}
@@ -292,96 +294,154 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
                 onChange={(e) =>
                   setIdentity((prev) => ({ ...prev, backstory: e.target.value }))
                 }
-                placeholder="Descreva onde você estava quando as luzes se apagaram e o que o mantém lutando..."
+                placeholder="Descreva traços de personalidade, o que teme perder e seu objetivo atual..."
                 className="w-full bg-bg-main border border-muted-ash/30 rounded-xl p-4 text-sm text-text-main focus:outline-none focus:border-secondary-uv resize-none"
               />
             </div>
           </div>
         )}
 
-        {/* PASSO 2: ORIGENS (CARDS EXPANSÍVEIS) */}
+        {/* PASSO 2: AS 35 ORIGENS OFICIAIS (CAPÍTULO 04) */}
         {currentStep === 2 && (
           <div className="space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div>
                 <h3 className="text-lg font-bold text-text-main">
-                  2. Escolha sua Origem
+                  2. Escolha sua Origem (35 Origens Oficiais — Cap. 04)
                 </h3>
                 <p className="text-xs text-muted-ash">
-                  Clique em um cartão para expandir sua{' '}
-                  <strong className="text-secondary-uv">Habilidade de Origem</strong> e as{' '}
-                  <strong className="text-text-main">4 Perícias Treinadas</strong> concedidas.
+                  Clique em uma Origem para ver sua{' '}
+                  <strong className="text-secondary-uv">Habilidade de Origem</strong> e selecionar suas{' '}
+                  <strong className="text-text-main">4 Perícias Treinadas (+2)</strong>.
                 </p>
               </div>
-              {selectedOrigin && (
-                <span className="text-xs font-mono px-3 py-1 rounded-full bg-secondary-uv/20 border border-secondary-uv text-text-main">
-                  Selecionada: {selectedOrigin.title}
-                </span>
-              )}
+              <input
+                type="text"
+                value={originSearch}
+                onChange={(e) => setOriginSearch(e.target.value)}
+                placeholder="Filtrar entre as 35 Origens..."
+                className="bg-bg-main border border-muted-ash/30 rounded-xl px-3.5 py-2 text-xs text-text-main focus:outline-none focus:border-secondary-uv w-full md:w-64"
+              />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {ANE_ORIGINS.map((origin) => {
+            {selectedOrigin && (
+              <div className="bg-bg-main border-2 border-secondary-uv rounded-xl p-4 space-y-3 shadow-uv-glow">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <span className="text-[10px] font-mono uppercase text-secondary-uv">
+                      Origem Selecionada
+                    </span>
+                    <h4 className="text-base font-extrabold text-text-main">
+                      {selectedOrigin.title} —{' '}
+                      <span className="text-secondary-uv">{selectedOrigin.abilityName}</span>
+                    </h4>
+                  </div>
+                  <span className="text-xs font-mono px-2.5 py-1 rounded bg-bg-card border border-secondary-uv/50 text-text-main">
+                    Perícias da Origem: {originGrantedSkills.length} / 4
+                  </span>
+                </div>
+
+                <p className="text-xs text-muted-ash leading-relaxed">
+                  {selectedOrigin.abilityDescription}
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-muted-ash/15">
+                  <div>
+                    <span className="text-[11px] font-mono uppercase text-muted-ash block mb-1.5">
+                      Perícias Fixas ({selectedOrigin.fixedSkills.length}):
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedOrigin.fixedSkills.length === 0 ? (
+                        <span className="text-xs text-muted-ash italic">
+                          Nenhuma fixa (Escolha 4 livres ao lado)
+                        </span>
+                      ) : (
+                        selectedOrigin.fixedSkills.map((sk) => (
+                          <span
+                            key={sk}
+                            className="text-xs font-mono px-2.5 py-1 rounded bg-primary-blood/30 border border-primary-blood text-text-main font-bold"
+                          >
+                            {sk} (+2 Fixa)
+                          </span>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {selectedOrigin.choiceCount > 0 && (
+                    <div>
+                      <span className="text-[11px] font-mono uppercase text-secondary-uv block mb-1.5">
+                        Escolha {selectedOrigin.choiceCount} opções da Origem ({originChosenSkills.length}/{selectedOrigin.choiceCount}):
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedOrigin.choicePool
+                          .filter((sk) => !selectedOrigin.fixedSkills.includes(sk))
+                          .map((sk) => {
+                            const isPicked = originChosenSkills.includes(sk);
+                            return (
+                              <button
+                                key={sk}
+                                type="button"
+                                onClick={() => toggleOriginChoiceSkill(sk)}
+                                className={`text-xs font-mono px-2.5 py-1 rounded border transition-all ${
+                                  isPicked
+                                    ? 'bg-secondary-uv text-text-main border-secondary-uv font-bold'
+                                    : 'bg-bg-card text-muted-ash border-muted-ash/25 hover:border-text-main'
+                                }`}
+                              >
+                                {sk} {isPicked ? '✓' : ''}
+                              </button>
+                            );
+                          })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[380px] overflow-y-auto pr-1">
+              {ANE_ORIGINS.filter(
+                (o) =>
+                  o.title.toLowerCase().includes(originSearch.toLowerCase()) ||
+                  o.subtitle.toLowerCase().includes(originSearch.toLowerCase()) ||
+                  o.abilityName.toLowerCase().includes(originSearch.toLowerCase())
+              ).map((origin) => {
                 const isSelected = selectedOrigin?.id === origin.id;
                 return (
                   <div
                     key={origin.id}
                     onClick={() => selectOrigin(origin.id)}
-                    className={`cursor-pointer rounded-xl p-5 border transition-all flex flex-col justify-between ${
+                    className={`cursor-pointer rounded-xl p-4 border transition-all flex flex-col justify-between ${
                       isSelected
-                        ? 'bg-bg-main border-2 border-secondary-uv shadow-uv-glow scale-[1.01]'
+                        ? 'bg-bg-main border-2 border-secondary-uv shadow-uv-glow'
                         : 'bg-bg-main/60 border-muted-ash/20 hover:border-muted-ash/50'
                     }`}
                   >
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <h4 className="font-extrabold text-base text-text-main">
+                        <h4 className="font-extrabold text-sm text-text-main">
                           {origin.title}
                         </h4>
                         <span
-                          className={`w-3 h-3 rounded-full ${
+                          className={`w-2.5 h-2.5 rounded-full ${
                             isSelected ? 'bg-secondary-uv' : 'bg-muted-ash/30'
                           }`}
                         />
                       </div>
-                      <p className="text-xs text-muted-ash leading-relaxed">
+                      <p className="text-[11px] text-muted-ash leading-relaxed">
                         {origin.subtitle}
                       </p>
                     </div>
 
-                    {/* Área Expandida / Revelada ao Selecionar (ou preview compacto) */}
-                    <div
-                      className={`mt-4 pt-3 border-t transition-all space-y-3 ${
-                        isSelected
-                          ? 'border-secondary-uv/40 opacity-100'
-                          : 'border-muted-ash/15 opacity-75'
-                      }`}
-                    >
-                      <div className="bg-bg-card p-3 rounded-lg border border-secondary-uv/30">
-                        <div className="text-[11px] font-mono uppercase text-secondary-uv flex items-center gap-1 font-bold">
-                          <Sparkles className="w-3.5 h-3.5" />
-                          {origin.abilityName}
-                        </div>
-                        <p className="text-xs text-text-main/90 mt-1 leading-relaxed">
-                          {origin.abilityDescription}
-                        </p>
+                    <div className="mt-3 pt-2.5 border-t border-muted-ash/15 space-y-2">
+                      <div className="text-[11px] font-mono text-secondary-uv flex items-center gap-1 font-bold">
+                        <Sparkles className="w-3 h-3 shrink-0" />
+                        {origin.abilityName}
                       </div>
-
-                      <div>
-                        <span className="text-[10px] font-mono uppercase text-muted-ash block mb-1.5">
-                          4 Perícias Concedidas (+2):
-                        </span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {origin.grantedSkills.map((sk) => (
-                            <span
-                              key={sk}
-                              className="text-[11px] font-mono px-2 py-0.5 rounded bg-primary-blood/25 border border-primary-blood/60 text-text-main"
-                            >
-                              {sk}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
+                      <p className="text-[11px] text-text-main/80 line-clamp-2">
+                        {origin.abilityDescription}
+                      </p>
                     </div>
                   </div>
                 );
@@ -396,11 +456,11 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-bg-main p-4 rounded-xl border border-muted-ash/20">
               <div>
                 <h3 className="text-lg font-bold text-text-main">
-                  3. Distribuição de Atributos
+                  3. Distribuição de Atributos (Cap. 3.4)
                 </h3>
                 <p className="text-xs text-muted-ash">
-                  Todos os atributos começam em <strong>1</strong>. O máximo permitido na criação é{' '}
-                  <strong>3</strong> (Soma total final = 11).
+                  Todos começam em <strong>1</strong>. Distribua <strong>6 pontos</strong>. Nenhum Atributo pode começar acima de{' '}
+                  <strong>3</strong> (Soma total = 11).
                 </p>
               </div>
 
@@ -472,7 +532,6 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
               })}
             </div>
 
-            {/* Preview em Tempo Real dos Derivados */}
             <div className="bg-bg-main/70 border border-muted-ash/15 rounded-xl p-4 grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
               <div>
                 <span className="text-[10px] font-mono uppercase text-muted-ash block">
@@ -508,7 +567,7 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
               </div>
               <div>
                 <span className="text-[10px] font-mono uppercase text-muted-ash block">
-                  INI (AGI + 1)
+                  INI (AGI + BN)
                 </span>
                 <span className="text-lg font-extrabold font-mono text-text-main">
                   +{derivedStats.ini}
@@ -518,18 +577,17 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
           </div>
         )}
 
-        {/* PASSO 4: PERÍCIAS (4 DA ORIGEM + [2 + INT] EXTRAS) */}
+        {/* PASSO 4: AS 28 PERÍCIAS OFICIAIS (4 DA ORIGEM + [2 + INT] ADICIONAIS) */}
         {currentStep === 4 && (
           <div className="space-y-6">
-            {/* Lista 1: 4 Perícias Bloqueadas/Adquiridas pela Origem */}
             <div className="bg-bg-main border border-primary-blood/40 rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-mono uppercase tracking-wider text-text-main flex items-center gap-2 font-bold">
                   <Lock className="w-3.5 h-3.5 text-primary-blood" />
-                  Perícias Concedidas pela Origem ({selectedOrigin?.title})
+                  4 Perícias Concedidas pela Origem ({selectedOrigin?.title})
                 </h4>
                 <span className="text-[11px] font-mono text-muted-ash">
-                  4 Perícias Fixas (Treinado +2)
+                  Treinadas (+2)
                 </span>
               </div>
 
@@ -553,16 +611,15 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
               </div>
             </div>
 
-            {/* Lista 2: Grade de Perícias Adicionais (2 + INT) */}
             <div className="space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <h4 className="text-base font-bold text-text-main">
                     Escolha suas Perícias Adicionais (2 + INT {attributes.INT} ={' '}
-                    {maxExtraSkillsAllowed})
+                    {maxExtraSkillsAllowed}) — Cap. 3.6 e Cap. 05 (28 Perícias)
                   </h4>
                   <p className="text-xs text-muted-ash">
-                    Selecione exatamente {maxExtraSkillsAllowed} perícias extras para iniciar como Treinado (+2).
+                    Selecione exatamente {maxExtraSkillsAllowed} perícias diferentes das concedidas pela Origem.
                   </p>
                 </div>
 
@@ -602,6 +659,7 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
                         </div>
                         <div className="text-[10px] font-mono text-muted-ash">
                           Atributo: {skill.attr}
+                          {skill.altAttr ? `/${skill.altAttr}` : ''}
                         </div>
                       </div>
 
@@ -626,10 +684,10 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h3 className="text-lg font-bold text-text-main">
-                  5. Revisão da Ficha & Estatísticas Derivadas
+                  5. Revisão da Ficha & Valores Derivados (Cap. 3.8)
                 </h3>
                 <p className="text-xs text-muted-ash">
-                  Confira os cálculos automáticos antes de registrar o sobrevivente no banco de dados.
+                  Confira as escolhas e os valores derivados antes de salvar a ficha.
                 </p>
               </div>
 
@@ -653,11 +711,10 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* Resumo de Identidade e Origem */}
               <div className="lg:col-span-5 bg-bg-main border border-muted-ash/20 rounded-xl p-5 space-y-4">
                 <div>
                   <span className="text-[10px] font-mono uppercase text-secondary-uv">
-                    Dossiê do Sobrevivente
+                    Dossiê do Sobrevivente (Nível 1 • BN +1)
                   </span>
                   <h4 className="text-xl font-extrabold text-text-main">
                     {identity.name} ({identity.age} anos)
@@ -681,22 +738,24 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
 
                 <div>
                   <span className="text-xs font-bold text-text-main block mb-2">
-                    Perícias Treinadas (+2):
+                    Total de Perícias Treinadas ({originGrantedSkills.length + selectedExtraSkills.length}):
                   </span>
                   <div className="flex flex-wrap gap-1.5">
-                    {[...originGrantedSkills, ...selectedExtraSkills].map((sk) => (
-                      <span
-                        key={sk}
-                        className="text-xs font-mono px-2.5 py-1 rounded bg-bg-card border border-secondary-uv/40 text-text-main"
-                      >
-                        {sk} (+2)
-                      </span>
-                    ))}
+                    {[...originGrantedSkills, ...selectedExtraSkills].map((sk) => {
+                      const skObj = ALL_ANE_SKILLS.find((s) => s.key === sk);
+                      return (
+                        <span
+                          key={sk}
+                          className="text-xs font-mono px-2.5 py-1 rounded bg-bg-card border border-secondary-uv/40 text-text-main"
+                        >
+                          {skObj?.label || sk} (+2)
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
 
-              {/* Valores Derivados Calculados Automaticamente */}
               <div className="lg:col-span-7 space-y-4">
                 <div className="grid grid-cols-5 gap-2 bg-bg-main border border-muted-ash/20 rounded-xl p-4 text-center">
                   {(['FOR', 'AGI', 'INT', 'PRE', 'VIG'] as AttributeKey[]).map(
@@ -767,7 +826,7 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
                         Defesa (DEF) & Iniciativa (INI)
                       </span>
                       <span className="text-[11px] font-mono text-muted-ash">
-                        DEF: 10+AGI | INI: AGI+1
+                        DEF: 10+AGI | INI: AGI+BN(+1)
                       </span>
                     </div>
                     <div className="text-right font-mono">

@@ -10,157 +10,282 @@ import {
   Plus,
   Trash2,
   Info,
+  Swords,
 } from 'lucide-react';
+import { ANE_BACKPACKS } from '../../data/aneSystemRules';
 
-export type EquipmentSlotKey = 'primaryWeapon' | 'secondaryWeapon' | 'armor' | 'pocket1' | 'pocket2';
+// Slots oficiais do Capítulo 15.1.3:
+// 1 Arma Principal, 1 Arma Secundária, 2 Armas Corpo a Corpo + Proteção Corporal
+export type EquipmentSlotKey =
+  | 'primaryWeapon'
+  | 'secondaryWeapon'
+  | 'meleeWeapon1'
+  | 'meleeWeapon2'
+  | 'armor';
 
 export interface SpatialGridItem {
   id: string;
   name: string;
-  category: 'weapon' | 'medical' | 'water' | 'ration' | 'armor' | 'gear';
+  category: 'firearm' | 'melee' | 'medical' | 'water' | 'ration' | 'armor' | 'gear';
   width: number;  // Colunas ocupadas
   height: number; // Linhas ocupadas
   x: number;      // Coluna inicial na mochila (0 a 7)
-  y: number;      // Linha inicial na mochila (0 a 5)
+  y: number;      // Linha inicial na mochila
   rotated?: boolean;
   equippedSlot?: EquipmentSlotKey | null;
-  description: string;
+  statsSummary: string;
 }
 
-export const GRID_COLS = 8;
-export const GRID_ROWS = 6;
-export const CELL_SIZE_PX = 52; // 52x52px por slot tático
+export const CELL_SIZE_PX = 50;
 
-// Catálogo de templates de itens dimensionais para adicionar/testar rapidamente
+// Catálogo oficial do Capítulo 15 e Capítulo 16 (Armas Corpo a Corpo, Armas de Fogo, Proteções e Suprimentos)
 export const SPATIAL_ITEM_TEMPLATES: Array<Omit<SpatialGridItem, 'id' | 'x' | 'y'>> = [
+  // Armas Corpo a Corpo (Cap. 16.2)
   {
-    name: 'Pílulas Antivirais UV',
-    category: 'medical',
+    name: 'Canivete',
+    category: 'melee',
     width: 1,
     height: 1,
-    description: '1x1 slot • Suprime 10% do avanço de infecção.',
+    statsSummary: '1×1 • 1d4 Perfuração (Crít 19/×2) • Pequena',
   },
   {
-    name: 'Bandagem Compressiva',
-    category: 'medical',
-    width: 1,
-    height: 1,
-    description: '1x1 slot • Estanca sangramento e recupera +4 PV.',
-  },
-  {
-    name: 'Garrafa de Água Purificada',
-    category: 'water',
+    name: 'Faca Tática',
+    category: 'melee',
     width: 1,
     height: 2,
-    description: '1x2 slots (Vertical) • Hidrata e reduz 1 nível de Fadiga.',
+    statsSummary: '1×2 • 1d6 Corte/Perfuração (19/×2) • Arremesso',
   },
   {
-    name: 'Ração Militar Liofilizada',
-    category: 'ration',
+    name: 'Machadinha',
+    category: 'melee',
     width: 1,
     height: 2,
-    description: '1x2 slots (Vertical) • Suprimento calórico concentrado.',
+    statsSummary: '1×2 • 1d8+2 Corte (20/×2) • Arremesso',
   },
   {
-    name: 'Pistola Tática 9mm',
-    category: 'weapon',
+    name: 'Pé de Cabra',
+    category: 'melee',
+    width: 1,
+    height: 3,
+    statsSummary: '1×3 • 1d8+2 Impacto (20/×2) • Ferramenta',
+  },
+  {
+    name: 'Facão',
+    category: 'melee',
+    width: 1,
+    height: 3,
+    statsSummary: '1×3 • 1d10 Corte (19/×2)',
+  },
+  {
+    name: 'Machado de Bombeiro',
+    category: 'melee',
+    width: 2,
+    height: 3,
+    statsSummary: '2×3 • 1d12+2 Corte (20/×2) • Pesada',
+  },
+  {
+    name: 'Marreta',
+    category: 'melee',
+    width: 2,
+    height: 4,
+    statsSummary: '2×4 • 2d8 Impacto (20/×2) • Pesada',
+  },
+  // Armas de Disparo & Fogo (Cap. 16.3)
+  {
+    name: 'Glock 17 (9mm)',
+    category: 'firearm',
+    width: 1,
+    height: 2,
+    statsSummary: '1×2 • 2d6 Balístico (19/×2) • Alc 18m • Cap 17',
+  },
+  {
+    name: 'Taurus 82 (.38)',
+    category: 'firearm',
+    width: 1,
+    height: 2,
+    statsSummary: '1×2 • 2d6 Balístico (19/×2) • Confiável • Cap 6',
+  },
+  {
+    name: 'Desert Eagle (.50)',
+    category: 'firearm',
+    width: 1,
+    height: 2,
+    statsSummary: '1×2 • 2d8 Balístico (20/×3) • Pesada • Cap 7',
+  },
+  {
+    name: 'MP5 (9mm)',
+    category: 'firearm',
+    width: 1,
+    height: 3,
+    statsSummary: '1×3 • 2d6 Balístico (20/×2) • Automática • Cap 30',
+  },
+  {
+    name: 'M1014 (Cal. 12)',
+    category: 'firearm',
+    width: 4,
+    height: 2,
+    statsSummary: '2×4 • 3d6 Balístico (20/×2) • Dispersão • Cap 7',
+  },
+  {
+    name: 'M4 (5.56)',
+    category: 'firearm',
+    width: 4,
+    height: 2,
+    statsSummary: '2×4 • 2d10 Balístico (20/×2) • Automática • Cap 30',
+  },
+  {
+    name: 'AK (7.62×39)',
+    category: 'firearm',
+    width: 4,
+    height: 2,
+    statsSummary: '2×4 • 2d12 Balístico (20/×2) • Confiável • Cap 30',
+  },
+  {
+    name: 'Rifle .308',
+    category: 'firearm',
+    width: 5,
+    height: 2,
+    statsSummary: '2×5 • 2d12 Balístico (19/×2) • Ferrolho, Precisão',
+  },
+  {
+    name: 'Besta Tática',
+    category: 'firearm',
+    width: 4,
+    height: 2,
+    statsSummary: '2×4 • 1d10+2 Perfuração (19/×2) • Silenciosa',
+  },
+  // Proteções (Cap. 16.5)
+  {
+    name: 'Jaqueta de Moto',
+    category: 'armor',
     width: 2,
     height: 2,
-    description: '2x2 slots • Arma secundária confiável para curta distância.',
+    statsSummary: '2×2 • PR 3 Corte, PR 2 Impacto • Resistente a Mordidas',
   },
   {
-    name: 'Colete Balístico Kevlar',
+    name: 'Colete Balístico',
     category: 'armor',
     width: 2,
     height: 3,
-    description: '2x3 slots • Proteção corporal (+3 Defesa).',
+    statsSummary: '2×3 • PR 5 Balístico (Cancela -2 LF Balístico)',
   },
   {
-    name: 'Espingarda Calibre 12',
-    category: 'weapon',
-    width: 4,
-    height: 2,
-    description: '4x2 slots • Arma primária de alto impacto.',
-  },
-];
-
-// Estado inicial mockado na mochila 8x6
-const INITIAL_MOCK_ITEMS: SpatialGridItem[] = [
-  {
-    id: 'sp-1',
-    name: 'Espingarda Calibre 12',
-    category: 'weapon',
-    width: 4,
-    height: 2,
-    x: 0,
-    y: 0,
-    description: '4x2 slots • Arma primária de alto impacto.',
-  },
-  {
-    id: 'sp-2',
-    name: 'Pistola Tática 9mm',
-    category: 'weapon',
-    width: 2,
-    height: 2,
-    x: 4,
-    y: 0,
-    description: '2x2 slots • Arma secundária confiável.',
-  },
-  {
-    id: 'sp-3',
-    name: 'Garrafa de Água Purificada',
-    category: 'water',
+    name: 'Mangas/Luvas Anticorte',
+    category: 'armor',
     width: 1,
     height: 2,
-    x: 6,
-    y: 0,
-    description: '1x2 slots • Hidrata e reduz Fadiga.',
+    statsSummary: '1×2 • PR 3 Corte • Resistente a Mordidas',
   },
+  // Suprimentos, Água, Comida e UV
   {
-    id: 'sp-4',
-    name: 'Ração Militar Liofilizada',
-    category: 'ration',
-    width: 1,
-    height: 2,
-    x: 7,
-    y: 0,
-    description: '1x2 slots • Porção de comida.',
-  },
-  {
-    id: 'sp-5',
-    name: 'Pílulas Antivirais UV',
+    name: 'Curativo / Bandagem',
     category: 'medical',
     width: 1,
     height: 1,
-    x: 0,
-    y: 2,
-    description: '1x1 slot • Suprime infecção.',
+    statsSummary: '1×1 • Auxilia em Estancar Sangramento e Medicina',
+  },
+  {
+    name: 'Kit Médico de Triagem',
+    category: 'medical',
+    width: 2,
+    height: 2,
+    statsSummary: '2×2 • Ferramenta adequada p/ tratar Ferimentos Graves/Críticos',
+  },
+  {
+    name: 'Garrafa de Água (1L)',
+    category: 'water',
+    width: 1,
+    height: 2,
+    statsSummary: '1×2 • 1 Litro = 2 Porções de Água (Cap. 12.1.3)',
+  },
+  {
+    name: 'Porção de Comida / Lata',
+    category: 'ration',
+    width: 1,
+    height: 1,
+    statsSummary: '1×1 • 1 Porção de Comida (Sustenta 12 horas)',
+  },
+  {
+    name: 'Lanterna UV Portátil',
+    category: 'gear',
+    width: 1,
+    height: 2,
+    statsSummary: '1×2 • Alcance 6m • Deixa Fotossensíveis Repelidos (Cap. 19.4.2)',
   },
 ];
 
-/**
- * Verifica se um item com dimensões (w, h) cabe na posição (targetX, targetY)
- * da matriz 8x6 sem sair da borda e sem colidir com outros itens na mochila.
- */
+const INITIAL_MOCK_ITEMS: SpatialGridItem[] = [
+  {
+    id: 'sp-1',
+    name: 'Glock 17 (9mm)',
+    category: 'firearm',
+    width: 1,
+    height: 2,
+    x: 0,
+    y: 0,
+    statsSummary: '1×2 • 2d6 Balístico (19/×2) • Alc 18m • Cap 17',
+  },
+  {
+    id: 'sp-2',
+    name: 'Faca Tática',
+    category: 'melee',
+    width: 1,
+    height: 2,
+    x: 1,
+    y: 0,
+    statsSummary: '1×2 • 1d6 Corte/Perfuração (19/×2)',
+  },
+  {
+    id: 'sp-3',
+    name: 'Garrafa de Água (1L)',
+    category: 'water',
+    width: 1,
+    height: 2,
+    x: 2,
+    y: 0,
+    statsSummary: '1×2 • 2 Porções de Água',
+  },
+  {
+    id: 'sp-4',
+    name: 'Porção de Comida / Lata',
+    category: 'ration',
+    width: 1,
+    height: 1,
+    x: 3,
+    y: 0,
+    statsSummary: '1×1 • 1 Porção de Comida',
+  },
+  {
+    id: 'sp-5',
+    name: 'Curativo / Bandagem',
+    category: 'medical',
+    width: 1,
+    height: 1,
+    x: 3,
+    y: 1,
+    statsSummary: '1×1 • Material médico',
+  },
+];
+
 export function canItemFitAt(
   itemsInBackpack: SpatialGridItem[],
   targetX: number,
   targetY: number,
   width: number,
   height: number,
+  gridCols: number,
+  gridRows: number,
   ignoreItemId?: string
 ): boolean {
-  // 1. Verifica limites da borda 8x6
   if (
     targetX < 0 ||
     targetY < 0 ||
-    targetX + width > GRID_COLS ||
-    targetY + height > GRID_ROWS
+    targetX + width > gridCols ||
+    targetY + height > gridRows
   ) {
     return false;
   }
 
-  // 2. Verifica sobreposição de retângulos (AABB Collision) com demais itens da mochila
   for (const other of itemsInBackpack) {
     if (other.id === ignoreItemId || other.equippedSlot) continue;
 
@@ -176,9 +301,16 @@ export function canItemFitAt(
 }
 
 export const SpatialGridInventory: React.FC = () => {
+  const [selectedBackpackId, setSelectedBackpackId] = useState<string>('expedicao');
   const [items, setItems] = useState<SpatialGridItem[]>(INITIAL_MOCK_ITEMS);
+  const [selectedTemplateIdx, setSelectedTemplateIdx] = useState<number>(0);
 
-  // Estado do item sendo arrastado no momento
+  const activeBackpack =
+    ANE_BACKPACKS.find((b) => b.id === selectedBackpackId) || ANE_BACKPACKS[6];
+
+  const gridCols = activeBackpack.cols;
+  const gridRows = activeBackpack.rows;
+
   const [draggingItem, setDraggingItem] = useState<{
     id: string;
     width: number;
@@ -186,12 +318,10 @@ export const SpatialGridInventory: React.FC = () => {
     rotated: boolean;
   } | null>(null);
 
-  // Coordenada (x, y) da célula sob o cursor durante o Drag Over
   const [hoverCell, setHoverCell] = useState<{ x: number; y: number } | null>(null);
 
   const backpackItems = items.filter((i) => !i.equippedSlot);
 
-  // Atalho de teclado "R" para rotacionar o item em 90 graus enquanto arrasta
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.key === 'r' || e.key === 'R') && draggingItem) {
@@ -212,7 +342,6 @@ export const SpatialGridInventory: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [draggingItem]);
 
-  // Verifica se a posição atual sob o cursor é válida (Verde) ou inválida (Vermelha)
   const isHoverValid = useCallback(() => {
     if (!draggingItem || !hoverCell) return false;
     return canItemFitAt(
@@ -221,9 +350,11 @@ export const SpatialGridInventory: React.FC = () => {
       hoverCell.y,
       draggingItem.width,
       draggingItem.height,
+      gridCols,
+      gridRows,
       draggingItem.id
     );
-  }, [backpackItems, draggingItem, hoverCell]);
+  }, [backpackItems, draggingItem, hoverCell, gridCols, gridRows]);
 
   const handleDragStart = (e: React.DragEvent, item: SpatialGridItem) => {
     e.dataTransfer.setData('text/plain', item.id);
@@ -258,6 +389,8 @@ export const SpatialGridInventory: React.FC = () => {
       cellY,
       draggingItem.width,
       draggingItem.height,
+      gridCols,
+      gridRows,
       draggingItem.id
     );
 
@@ -283,11 +416,12 @@ export const SpatialGridInventory: React.FC = () => {
     setHoverCell(null);
   };
 
-  // Girar item diretamente com botão na grade (caso não esteja arrastando)
   const rotatePlacedItem = (item: SpatialGridItem) => {
     const newW = item.height;
     const newH = item.width;
-    if (canItemFitAt(backpackItems, item.x, item.y, newW, newH, item.id)) {
+    if (
+      canItemFitAt(backpackItems, item.x, item.y, newW, newH, gridCols, gridRows, item.id)
+    ) {
       setItems((prev) =>
         prev.map((i) =>
           i.id === item.id
@@ -298,7 +432,6 @@ export const SpatialGridInventory: React.FC = () => {
     }
   };
 
-  // Equipar item em um Slot de Equipamento Fixo
   const handleDropOnEquipmentSlot = (
     e: React.DragEvent,
     slotKey: EquipmentSlotKey,
@@ -310,7 +443,6 @@ export const SpatialGridInventory: React.FC = () => {
     const draggedObj = items.find((i) => i.id === draggingItem.id);
     if (!draggedObj) return;
 
-    // Verifica compatibilidade do slot e se já não está ocupado por outro item
     const alreadyEquipped = items.find(
       (i) => i.equippedSlot === slotKey && i.id !== draggedObj.id
     );
@@ -329,13 +461,12 @@ export const SpatialGridInventory: React.FC = () => {
     setHoverCell(null);
   };
 
-  // Adicionar novo item na primeira posição livre da mochila 8x6
   const addTemplateToBackpack = (
     tpl: Omit<SpatialGridItem, 'id' | 'x' | 'y'>
   ) => {
-    for (let y = 0; y < GRID_ROWS; y++) {
-      for (let x = 0; x < GRID_COLS; x++) {
-        if (canItemFitAt(backpackItems, x, y, tpl.width, tpl.height)) {
+    for (let y = 0; y < gridRows; y++) {
+      for (let x = 0; x < gridCols; x++) {
+        if (canItemFitAt(backpackItems, x, y, tpl.width, tpl.height, gridCols, gridRows)) {
           const newItem: SpatialGridItem = {
             ...tpl,
             id: `sp-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
@@ -347,21 +478,28 @@ export const SpatialGridInventory: React.FC = () => {
         }
       }
     }
-    alert('Espaço insuficiente na mochila (8x6)! Reorganize ou gire seus itens.');
+    alert(
+      `Espaço insuficiente na ${activeBackpack.name} (${gridCols}×${gridRows})! Reorganize, gire itens ou troque para uma mochila maior.`
+    );
   };
 
   const removeItem = (id: string) => {
     setItems((prev) => prev.filter((i) => i.id !== id));
   };
 
-  // Estilização por categoria de item
   const getCategoryTheme = (cat: SpatialGridItem['category']) => {
     switch (cat) {
-      case 'weapon':
+      case 'firearm':
         return {
           bg: 'bg-primary-blood/35 border-primary-blood',
           badge: 'text-primary-blood',
           icon: Crosshair,
+        };
+      case 'melee':
+        return {
+          bg: 'bg-warning-rust/30 border-warning-rust',
+          badge: 'text-warning-rust',
+          icon: Swords,
         };
       case 'medical':
         return {
@@ -400,62 +538,89 @@ export const SpatialGridInventory: React.FC = () => {
 
   return (
     <div className="bg-bg-card border border-muted-ash/20 rounded-2xl p-6 space-y-6">
-      {/* Cabeçalho do Inventário Espacial */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-muted-ash/15 pb-4">
+      {/* Cabeçalho do Inventário Espacial (Cap. 15 e Cap. 16) */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-muted-ash/15 pb-4">
         <div>
           <span className="text-[11px] font-mono uppercase tracking-widest text-secondary-uv">
-            MÓDULO SURVIVAL HORROR // GRADE ESPACIAL 8x6
+            CAPÍTULO 15 & 16 // MOCHILAS, ARMAS & PROTEÇÕES EM GRADE
           </span>
           <h3 className="text-lg font-extrabold text-text-main mt-0.5">
-            Mochila Tática & Slots de Equipamento
+            Inventário Espacial ({activeBackpack.name} — {gridCols}×{gridRows})
           </h3>
+          <p className="text-xs text-muted-ash">
+            Característica da Mochila: <strong className="text-text-main">{activeBackpack.specialFeature}</strong>
+          </p>
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-muted-ash bg-bg-main px-3.5 py-2 rounded-xl border border-muted-ash/20">
-          <Info className="w-4 h-4 text-secondary-uv shrink-0" />
-          <span>
-            Arraste itens para posicionar. Pressione{' '}
-            <kbd className="px-1.5 py-0.5 rounded bg-bg-card border border-muted-ash/40 font-mono text-text-main">
-              R
-            </kbd>{' '}
-            enquanto arrasta (ou clique no ícone de giro) para rotacionar 90°.
-          </span>
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Seletor das 7 Mochilas Oficiais do Livro */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono text-muted-ash">Mochila:</span>
+            <select
+              value={selectedBackpackId}
+              onChange={(e) => setSelectedBackpackId(e.target.value)}
+              className="bg-bg-main border border-muted-ash/30 rounded-xl px-3 py-2 text-xs font-bold text-text-main focus:outline-none focus:border-secondary-uv"
+            >
+              {ANE_BACKPACKS.map((bp) => (
+                <option key={bp.id} value={bp.id}>
+                  {bp.name} ({bp.cols}×{bp.rows})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs text-muted-ash bg-bg-main px-3 py-2 rounded-xl border border-muted-ash/20">
+            <Info className="w-4 h-4 text-secondary-uv shrink-0" />
+            <span>
+              Tecla{' '}
+              <kbd className="px-1.5 py-0.5 rounded bg-bg-card border border-muted-ash/40 font-mono text-text-main">
+                R
+              </kbd>{' '}
+              gira o item 90°.
+            </span>
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-        {/* COLUNA ESQUERDA: Slots de Equipamento Fixos (5 cols) */}
+        {/* COLUNA ESQUERDA: Slots Equipados no Corpo (Cap. 15.1.3) + Catálogo Oficial (5 cols) */}
         <div className="xl:col-span-5 space-y-4">
           <h4 className="text-xs font-mono uppercase tracking-wider text-muted-ash">
-            Slots de Equipamento no Corpo
+            Itens Equipados no Corpo (1 Principal • 1 Secundária • 2 Corpo a Corpo • Proteção)
           </h4>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {(
               [
                 {
                   key: 'primaryWeapon',
-                  label: 'Arma Primária',
-                  hint: 'Aceita Armas (Ex: Espingarda 4x2)',
-                  accepts: ['weapon'],
+                  label: '1. Arma Principal',
+                  hint: 'Fuzil, Espingarda, Rifle, Besta...',
+                  accepts: ['firearm', 'melee'],
                 },
                 {
                   key: 'secondaryWeapon',
-                  label: 'Arma Secundária',
-                  hint: 'Aceita Armas (Ex: Pistola 2x2)',
-                  accepts: ['weapon'],
+                  label: '2. Arma Secundária',
+                  hint: 'Pistola, Revólver, Submetralhadora...',
+                  accepts: ['firearm', 'melee'],
+                },
+                {
+                  key: 'meleeWeapon1',
+                  label: '3. Corpo a Corpo (01)',
+                  hint: 'Faca, Facão, Machado, Pé de Cabra...',
+                  accepts: ['melee'],
+                },
+                {
+                  key: 'meleeWeapon2',
+                  label: '4. Corpo a Corpo (02)',
+                  hint: 'Canivete, Bastão, Machadinha...',
+                  accepts: ['melee'],
                 },
                 {
                   key: 'armor',
-                  label: 'Proteção Corporal',
-                  hint: 'Aceita Coletes / Trajes',
-                  accepts: ['armor', 'gear'],
-                },
-                {
-                  key: 'pocket1',
-                  label: 'Bolso Rápido 01',
-                  hint: 'Médico / Ração / Água',
-                  accepts: ['medical', 'water', 'ration'],
+                  label: '5. Proteção Corporal',
+                  hint: 'Colete Balístico, Jaqueta de Moto...',
+                  accepts: ['armor'],
                 },
               ] as Array<{
                 key: EquipmentSlotKey;
@@ -473,7 +638,7 @@ export const SpatialGridInventory: React.FC = () => {
                   onDrop={(e) =>
                     handleDropOnEquipmentSlot(e, slot.key, slot.accepts)
                   }
-                  className={`min-h-[108px] rounded-xl p-3.5 border-2 border-dashed transition-all flex flex-col justify-between ${
+                  className={`min-h-[96px] rounded-xl p-3 border-2 border-dashed transition-all flex flex-col justify-between ${
                     equippedItem
                       ? 'bg-bg-main border-secondary-uv shadow-uv-glow'
                       : 'bg-bg-main/60 border-muted-ash/25 hover:border-secondary-uv/60'
@@ -485,8 +650,8 @@ export const SpatialGridInventory: React.FC = () => {
                     </span>
                     <span className="text-[10px] text-secondary-uv">
                       {equippedItem
-                        ? `${equippedItem.width}x${equippedItem.height}`
-                        : 'VAZIO'}
+                        ? `${equippedItem.width}×${equippedItem.height}`
+                        : 'LIVRE'}
                     </span>
                   </div>
 
@@ -495,26 +660,26 @@ export const SpatialGridInventory: React.FC = () => {
                       draggable
                       onDragStart={(e) => handleDragStart(e, equippedItem)}
                       onDragEnd={handleDragEnd}
-                      className="mt-2 p-2.5 rounded-lg bg-bg-card border border-secondary-uv/50 cursor-grab active:cursor-grabbing flex items-center justify-between"
+                      className="mt-1.5 p-2 rounded-lg bg-bg-card border border-secondary-uv/50 cursor-grab active:cursor-grabbing flex items-center justify-between gap-2"
                     >
                       <div className="truncate">
                         <div className="text-xs font-bold text-text-main truncate">
                           {equippedItem.name}
                         </div>
-                        <div className="text-[10px] text-muted-ash truncate">
-                          Arraste de volta para a grade 8x6
+                        <div className="text-[10px] font-mono text-muted-ash truncate">
+                          {equippedItem.statsSummary}
                         </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => removeItem(equippedItem.id)}
-                        className="p-1 text-muted-ash hover:text-primary-blood"
+                        className="p-1 text-muted-ash hover:text-primary-blood shrink-0"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   ) : (
-                    <div className="text-[11px] text-muted-ash/60 italic py-3 text-center">
+                    <div className="text-[11px] text-muted-ash/60 italic py-2 text-center">
                       {slot.hint}
                     </div>
                   )}
@@ -523,50 +688,58 @@ export const SpatialGridInventory: React.FC = () => {
             })}
           </div>
 
-          {/* Suprimentos Rápidos para Testar Colisão na Grade */}
+          {/* Catálogo Oficial de Armas, Proteções e Recursos (Cap. 16) */}
           <div className="bg-bg-main border border-muted-ash/20 rounded-xl p-4 space-y-3">
-            <span className="text-xs font-mono uppercase tracking-wider text-muted-ash block">
-              Adicionar Item Dimensional na Grade:
+            <span className="text-xs font-mono uppercase tracking-wider text-secondary-uv block font-bold">
+              Catálogo Oficial do Livro (Cap. 15 e 16):
             </span>
-            <div className="grid grid-cols-2 gap-2">
-              {SPATIAL_ITEM_TEMPLATES.map((tpl) => (
-                <button
-                  key={tpl.name}
-                  type="button"
-                  onClick={() => addTemplateToBackpack(tpl)}
-                  className="p-2 rounded-lg bg-bg-card hover:border-secondary-uv border border-muted-ash/25 text-left transition-all flex items-center justify-between gap-2"
-                >
-                  <div className="truncate">
-                    <div className="text-xs font-semibold text-text-main truncate">
-                      {tpl.name}
-                    </div>
-                    <div className="text-[10px] font-mono text-secondary-uv">
-                      {tpl.width}x{tpl.height} slots
-                    </div>
-                  </div>
-                  <Plus className="w-3.5 h-3.5 text-muted-ash shrink-0" />
-                </button>
-              ))}
+
+            <div className="flex gap-2">
+              <select
+                value={selectedTemplateIdx}
+                onChange={(e) => setSelectedTemplateIdx(Number(e.target.value))}
+                className="flex-1 bg-bg-card border border-muted-ash/30 rounded-lg px-3 py-2 text-xs text-text-main focus:outline-none focus:border-secondary-uv"
+              >
+                {SPATIAL_ITEM_TEMPLATES.map((tpl, idx) => (
+                  <option key={tpl.name} value={idx}>
+                    [{tpl.width}×{tpl.height}] {tpl.name} — {tpl.statsSummary.split('•')[1]}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                type="button"
+                onClick={() =>
+                  addTemplateToBackpack(SPATIAL_ITEM_TEMPLATES[selectedTemplateIdx])
+                }
+                className="px-3.5 py-2 rounded-lg bg-secondary-uv hover:bg-secondary-uv/90 text-text-main text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-uv-glow"
+              >
+                <Plus className="w-4 h-4" />
+                Guardar
+              </button>
+            </div>
+
+            <div className="text-[11px] font-mono text-muted-ash bg-bg-card p-2.5 rounded-lg border border-muted-ash/15">
+              {SPATIAL_ITEM_TEMPLATES[selectedTemplateIdx]?.statsSummary}
             </div>
           </div>
         </div>
 
-        {/* COLUNA DIREITA: A Matriz Principal 8x6 (Mochila Tática) (7 cols) */}
+        {/* COLUNA DIREITA: A Matriz Dinâmica da Mochila (8 × N) (7 cols) */}
         <div className="xl:col-span-7 flex flex-col items-center">
           <div className="w-full flex items-center justify-between mb-2">
             <span className="text-xs font-mono uppercase tracking-wider text-muted-ash">
-              Grade da Mochila ({GRID_COLS} Colunas × {GRID_ROWS} Linhas)
+              Grade da {activeBackpack.name} ({gridCols} Colunas × {gridRows} Linhas)
             </span>
             <span className="text-xs font-mono text-text-main">
-              Slots Ocupados:{' '}
+              Espaços Ocupados:{' '}
               <strong className="text-secondary-uv">
                 {backpackItems.reduce((acc, i) => acc + i.width * i.height, 0)}
               </strong>{' '}
-              / {GRID_COLS * GRID_ROWS}
+              / {gridCols * gridRows}
             </span>
           </div>
 
-          {/* Container da Matriz 8x6 */}
           <div
             className="relative bg-bg-main/95 border-2 border-muted-ash/30 rounded-xl p-2 shadow-2xl select-none overflow-x-auto"
             onDragLeave={() => setHoverCell(null)}
@@ -574,16 +747,14 @@ export const SpatialGridInventory: React.FC = () => {
             <div
               className="relative grid"
               style={{
-                gridTemplateColumns: `repeat(${GRID_COLS}, ${CELL_SIZE_PX}px)`,
-                gridTemplateRows: `repeat(${GRID_ROWS}, ${CELL_SIZE_PX}px)`,
-                width: `${GRID_COLS * CELL_SIZE_PX}px`,
-                height: `${GRID_ROWS * CELL_SIZE_PX}px`,
+                gridTemplateColumns: `repeat(${gridCols}, ${CELL_SIZE_PX}px)`,
+                gridTemplateRows: `repeat(${gridRows}, ${CELL_SIZE_PX}px)`,
+                width: `${gridCols * CELL_SIZE_PX}px`,
+                height: `${gridRows * CELL_SIZE_PX}px`,
               }}
             >
-              {/* 1. Renderiza as 48 células (8x6) com feedback Verde/Vermelho em tempo real */}
-              {Array.from({ length: GRID_ROWS }).map((_, rowIdx) =>
-                Array.from({ length: GRID_COLS }).map((__, colIdx) => {
-                  // Verifica se esta célula faz parte da pegada (footprint) do item sendo arrastado
+              {Array.from({ length: gridRows }).map((_, rowIdx) =>
+                Array.from({ length: gridCols }).map((__, colIdx) => {
                   let isWithinHoverFootprint = false;
                   if (draggingItem && hoverCell) {
                     isWithinHoverFootprint =
@@ -614,7 +785,6 @@ export const SpatialGridInventory: React.FC = () => {
                 })
               )}
 
-              {/* 2. Renderiza os Itens Dimensionais posicionados na Matriz */}
               {backpackItems.map((item) => {
                 const theme = getCategoryTheme(item.category);
                 const Icon = theme.icon;
@@ -626,6 +796,7 @@ export const SpatialGridInventory: React.FC = () => {
                     draggable
                     onDragStart={(e) => handleDragStart(e, item)}
                     onDragEnd={handleDragEnd}
+                    title={item.statsSummary}
                     style={{
                       left: `${item.x * CELL_SIZE_PX}px`,
                       top: `${item.y * CELL_SIZE_PX}px`,
