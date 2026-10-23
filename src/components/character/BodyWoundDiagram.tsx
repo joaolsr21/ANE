@@ -297,7 +297,7 @@ export const BodyWoundDiagram: React.FC<BodyWoundDiagramProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-muted-ash/15 pb-3">
         <div>
           <span className="text-[10px] font-mono uppercase tracking-widest text-primary-blood">
-            CAPÍTULO 11 // SISTEMA ANATÔMICO DE FERIMENTOS & SANGRAMENTO
+            SISTEMA ANATÔMICO DE FERIMENTOS & SANGRAMENTO
           </span>
           <h3 className="text-base font-bold text-text-main flex items-center gap-2">
             <HeartPulse className="w-4 h-4 text-primary-blood" />
@@ -324,7 +324,7 @@ export const BodyWoundDiagram: React.FC<BodyWoundDiagramProps> = ({
         <div className="p-3 rounded-lg bg-primary-blood/30 border-2 border-primary-blood text-xs text-text-main flex items-center gap-2 font-bold">
           <Skull className="w-5 h-5 text-primary-blood shrink-0" />
           <span>
-            DESTRUIÇÃO CEREBRAL ATINGIDA (Cap. 20.1.4): Ferimento Crítico na Cabeça neutraliza imediatamente o Infectado!
+            DESTRUIÇÃO CEREBRAL ATINGIDA: Ferimento Crítico na Cabeça neutraliza imediatamente o Infectado!
           </span>
         </div>
       )}

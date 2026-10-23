@@ -11,8 +11,16 @@ import {
   Trash2,
   Info,
   Swords,
+  MessageSquare,
+  Sparkles,
 } from 'lucide-react';
 import { ANE_BACKPACKS } from '../../data/aneSystemRules';
+
+interface SpatialGridInventoryProps {
+  characterName?: string;
+  onConsumeResource?: (category: 'water' | 'ration' | 'medical', item: SpatialGridItem) => void;
+  onShareItemToChat?: (item: SpatialGridItem) => void;
+}
 
 // Slots oficiais do Capítulo 15.1.3:
 // 1 Arma Principal, 1 Arma Secundária, 2 Armas Corpo a Corpo + Proteção Corporal
@@ -196,7 +204,7 @@ export const SPATIAL_ITEM_TEMPLATES: Array<Omit<SpatialGridItem, 'id' | 'x' | 'y
     category: 'water',
     width: 1,
     height: 2,
-    statsSummary: '1×2 • 1 Litro = 2 Porções de Água (Cap. 12.1.3)',
+    statsSummary: '1×2 • 1 Litro = 2 Porções de Água',
   },
   {
     name: 'Porção de Comida / Lata',
@@ -210,7 +218,7 @@ export const SPATIAL_ITEM_TEMPLATES: Array<Omit<SpatialGridItem, 'id' | 'x' | 'y
     category: 'gear',
     width: 1,
     height: 2,
-    statsSummary: '1×2 • Alcance 6m • Deixa Fotossensíveis Repelidos (Cap. 19.4.2)',
+    statsSummary: '1×2 • Alcance 6m • Deixa Fotossensíveis Repelidos',
   },
 ];
 
@@ -300,7 +308,10 @@ export function canItemFitAt(
   return true;
 }
 
-export const SpatialGridInventory: React.FC = () => {
+export const SpatialGridInventory: React.FC<SpatialGridInventoryProps> = ({
+  onConsumeResource,
+  onShareItemToChat,
+}) => {
   const [selectedBackpackId, setSelectedBackpackId] = useState<string>('expedicao');
   const [items, setItems] = useState<SpatialGridItem[]>(INITIAL_MOCK_ITEMS);
   const [selectedTemplateIdx, setSelectedTemplateIdx] = useState<number>(0);
@@ -542,7 +553,7 @@ export const SpatialGridInventory: React.FC = () => {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-muted-ash/15 pb-4">
         <div>
           <span className="text-[11px] font-mono uppercase tracking-widest text-secondary-uv">
-            CAPÍTULO 15 & 16 // MOCHILAS, ARMAS & PROTEÇÕES EM GRADE
+            MOCHILAS, ARMAS & PROTEÇÕES EM GRADE
           </span>
           <h3 className="text-lg font-extrabold text-text-main mt-0.5">
             Inventário Espacial ({activeBackpack.name} — {gridCols}×{gridRows})
@@ -670,13 +681,25 @@ export const SpatialGridInventory: React.FC = () => {
                           {equippedItem.statsSummary}
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => removeItem(equippedItem.id)}
-                        className="p-1 text-muted-ash hover:text-primary-blood shrink-0"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {onShareItemToChat && (
+                          <button
+                            type="button"
+                            onClick={() => onShareItemToChat(equippedItem)}
+                            title="Mostrar item e descrição no Chat da Campanha"
+                            className="p-1 text-secondary-uv hover:text-text-main"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeItem(equippedItem.id)}
+                          className="p-1 text-muted-ash hover:text-primary-blood"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <div className="text-[11px] text-muted-ash/60 italic py-2 text-center">
@@ -691,7 +714,7 @@ export const SpatialGridInventory: React.FC = () => {
           {/* Catálogo Oficial de Armas, Proteções e Recursos (Cap. 16) */}
           <div className="bg-bg-main border border-muted-ash/20 rounded-xl p-4 space-y-3">
             <span className="text-xs font-mono uppercase tracking-wider text-secondary-uv block font-bold">
-              Catálogo Oficial do Livro (Cap. 15 e 16):
+              Catálogo de Armas, Proteções & Suprimentos:
             </span>
 
             <div className="flex gap-2">
@@ -813,6 +836,37 @@ export const SpatialGridInventory: React.FC = () => {
                       </span>
 
                       <div className="flex items-center gap-0.5 opacity-80 group-hover:opacity-100 shrink-0">
+                        {(item.category === 'water' ||
+                          item.category === 'ration' ||
+                          item.category === 'medical') && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onConsumeResource) {
+                                onConsumeResource(item.category as 'water' | 'ration' | 'medical', item);
+                              }
+                              removeItem(item.id);
+                            }}
+                            title="Consumir item agora (Registra no Chat)"
+                            className="p-0.5 rounded bg-warning-rust text-text-main hover:bg-warning-rust/80"
+                          >
+                            <Sparkles className="w-3 h-3" />
+                          </button>
+                        )}
+                        {onShareItemToChat && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onShareItemToChat(item);
+                            }}
+                            title="Mostrar descrição do item no Chat"
+                            className="p-0.5 rounded bg-bg-main/80 text-secondary-uv hover:text-text-main"
+                          >
+                            <MessageSquare className="w-3 h-3" />
+                          </button>
+                        )}
                         {item.width !== item.height && (
                           <button
                             type="button"

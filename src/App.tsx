@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { AppLayout, ANETab } from './components/layout/AppLayout';
 import { DashboardView } from './components/dashboard/DashboardView';
+import { CampaignsView } from './components/campaigns/CampaignsView';
 import { CharacterSheetView } from './components/character/CharacterSheetView';
-import { MasterControlView } from './components/master/MasterControlView';
+import { DiceRollerView } from './components/dice/DiceRollerView';
 import { AuthScreen } from './components/auth/AuthScreen';
 import { useSupabaseAuth } from './hooks/useSupabaseAuth';
 import { useCampaigns } from './hooks/useCampaigns';
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<ANETab>('dashboard');
+  const [activeTab, setActiveTab] = useState<ANETab>('resumo');
 
   const {
     user,
@@ -30,7 +31,6 @@ export function App() {
     deleteCharacter,
   } = useCampaigns(user?.id);
 
-  // Tela de carregamento inicial da sessão
   if (authLoading) {
     return (
       <div className="min-h-screen bg-bg-main text-text-main flex items-center justify-center font-mono text-xs uppercase tracking-widest">
@@ -39,7 +39,6 @@ export function App() {
     );
   }
 
-  // Exige Login / Criar Conta antes de liberar acesso ao sistema
   if (!user) {
     return (
       <AuthScreen
@@ -57,8 +56,19 @@ export function App() {
       onTabChange={setActiveTab}
       onSignOut={signOut}
     >
-      {activeTab === 'dashboard' && (
+      {activeTab === 'resumo' && (
         <DashboardView
+          campaigns={campaigns}
+          characters={characters}
+          currentUserId={user.id}
+          onGoToCampaigns={() => setActiveTab('campanhas')}
+          onGoToFichas={() => setActiveTab('fichas')}
+          onGoToDados={() => setActiveTab('dados')}
+        />
+      )}
+
+      {activeTab === 'campanhas' && (
+        <CampaignsView
           campaigns={campaigns}
           characters={characters}
           currentUserId={user.id}
@@ -66,30 +76,23 @@ export function App() {
           onDeleteCampaign={deleteCampaign}
           onJoinCampaign={joinCampaignByCode}
           onCreateCharacter={createCharacter}
+          onUpdateCharacter={updateCharacter}
           onDeleteCharacter={deleteCharacter}
-          onOpenCharacterSheet={() => setActiveTab('characters')}
-          onOpenMasterShield={() => setActiveTab('master-control')}
         />
       )}
 
-      {activeTab === 'characters' && (
+      {activeTab === 'fichas' && (
         <CharacterSheetView
           characters={characters}
           campaigns={campaigns}
           onUpdateCharacter={updateCharacter}
           onCreateCharacter={createCharacter}
+          onDeleteCharacter={deleteCharacter}
         />
       )}
 
-      {activeTab === 'master-control' && (
-        <MasterControlView
-          campaigns={campaigns}
-          characters={characters}
-          currentUserId={user.id}
-          onCreateCharacter={createCharacter}
-          onUpdateCharacter={updateCharacter}
-          onDeleteCharacter={deleteCharacter}
-        />
+      {activeTab === 'dados' && (
+        <DiceRollerView characters={characters} />
       )}
     </AppLayout>
   );

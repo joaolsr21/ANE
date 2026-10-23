@@ -5,13 +5,14 @@ import {
   Users,
   Radio,
   LogOut,
-  Crown,
   Compass,
   Activity,
+  Dices,
+  FolderKanban,
 } from 'lucide-react';
 import { Profile } from '../../types/database';
 
-export type ANETab = 'dashboard' | 'characters' | 'master-control';
+export type ANETab = 'resumo' | 'campanhas' | 'fichas' | 'dados';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -49,54 +50,66 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                 </h1>
                 <span className="text-[11px] font-mono text-muted-ash flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-secondary-uv animate-pulse" />
-                  SISTEMA DE FICHAS & DADOS
+                  RPG DE SOBREVIVÊNCIA
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Menu de Navegação Principal */}
+          {/* Menu de Navegação Principal: 4 Abas Dedicadas */}
           <nav className="p-3 space-y-1.5">
             <button
-              onClick={() => onTabChange('dashboard')}
+              onClick={() => onTabChange('resumo')}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                activeTab === 'dashboard'
+                activeTab === 'resumo'
                   ? 'bg-primary-blood text-text-main shadow-blood-glow'
                   : 'text-muted-ash hover:bg-bg-main/60 hover:text-text-main'
               }`}
             >
               <Compass className="w-4 h-4" />
-              Campanhas & Resumo
+              Resumo
             </button>
 
             <button
-              onClick={() => onTabChange('characters')}
+              onClick={() => onTabChange('campanhas')}
               className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                activeTab === 'characters'
+                activeTab === 'campanhas'
+                  ? 'bg-primary-blood text-text-main shadow-blood-glow'
+                  : 'text-muted-ash hover:bg-bg-main/60 hover:text-text-main'
+              }`}
+            >
+              <FolderKanban className="w-4 h-4" />
+              Campanhas
+            </button>
+
+            <button
+              onClick={() => onTabChange('fichas')}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                activeTab === 'fichas'
                   ? 'bg-primary-blood text-text-main shadow-blood-glow'
                   : 'text-muted-ash hover:bg-bg-main/60 hover:text-text-main'
               }`}
             >
               <Users className="w-4 h-4" />
-              Fichas & Rolador de Dados
+              Personagens
             </button>
 
             <button
-              onClick={() => onTabChange('master-control')}
+              onClick={() => onTabChange('dados')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                activeTab === 'master-control'
+                activeTab === 'dados'
                   ? 'bg-secondary-uv text-text-main shadow-uv-glow'
                   : 'text-muted-ash hover:bg-bg-main/60 hover:text-text-main'
               }`}
             >
               <span className="flex items-center gap-3">
-                <Crown className="w-4 h-4" />
-                Escudo do Mestre & Monstros
+                <Dices className="w-4 h-4" />
+                Rolador de Dados
               </span>
             </button>
           </nav>
 
-          {/* Indicador de Permissão RBAC */}
+          {/* Indicador de Permissão */}
           <div className="mx-3 mt-4 p-3.5 rounded-lg bg-bg-main/80 border border-warning-rust/40 space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="text-warning-rust font-semibold flex items-center gap-1.5">
@@ -106,7 +119,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
               <span className="font-mono text-[11px] text-muted-ash">RLS ATIVO</span>
             </div>
             <p className="text-xs text-muted-ash leading-relaxed">
-              O Mestre tem controle total sobre campanhas, fichas de jogadores, monstros e rolagens.
+              Abra uma campanha na aba Campanhas para acessar o Escudo do Mestre (se for o Mestre) ou a Área do Jogador.
             </p>
           </div>
         </div>
@@ -141,7 +154,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-muted-ash">
               <Radio className="w-4 h-4 text-secondary-uv" />
-              Terminal ANE: <strong className="text-text-main">Operacional</strong>
+              Sistema ANE: <strong className="text-text-main">Operacional</strong>
             </span>
           </div>
 
@@ -155,7 +168,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                 SAN / Fome / Sede
               </span>
               <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-secondary-uv/20 border border-secondary-uv/50 text-text-main">
-                Dados UV
+                Dados & Testes
               </span>
             </div>
           </div>

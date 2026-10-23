@@ -788,3 +788,109 @@ export function getSanityStateInfo(sanCurrent: number, sanMax: number) {
   }
   return { state: 'Estável', color: 'text-secondary-uv', desc: 'Funcionamento psicológico preservado.' };
 }
+
+// ============================================================================
+// 7. HABILIDADES GERAIS OFICIAIS (Para adicionar à Ficha e Mostrar no Chat)
+// ============================================================================
+export interface GeneralAbilityInfo {
+  id: string;
+  name: string;
+  category: 'Combate' | 'Sobrevivência' | 'Medicina & Ciência' | 'Furtividade & Mobilidade' | 'Mental & Liderança';
+  prerequisite: string;
+  description: string;
+}
+
+export const ANE_GENERAL_ABILITIES: GeneralAbilityInfo[] = [
+  {
+    id: 'golpe-brutal',
+    name: 'Golpe Brutal',
+    category: 'Combate',
+    prerequisite: 'FOR 2, Luta Treinado',
+    description: 'Seus ataques corpo a corpo com armas de duas mãos ou contundentes causam +2 de dano e aumentam em +1 a dificuldade para o alvo resistir a Derrubar.',
+  },
+  {
+    id: 'tiro-preciso',
+    name: 'Tiro Preciso',
+    category: 'Combate',
+    prerequisite: 'AGI 2, Pontaria Treinado',
+    description: 'Quando realiza a ação Mirar antes de disparar, além do bônus normal, você ignora penalidades de cobertura leve e recebe +2 no dano do disparo.',
+  },
+  {
+    id: 'reflexo-de-combate',
+    name: 'Reflexo de Combate',
+    category: 'Combate',
+    prerequisite: 'AGI 2, Reflexos Treinado',
+    description: 'Na primeira rodada de qualquer combate, você recebe +2 na Iniciativa e pode sacar uma arma como Ação Livre mesmo se estiver Desprevenido.',
+  },
+  {
+    id: 'combate-aproximado',
+    name: 'Combate Aproximado',
+    category: 'Combate',
+    prerequisite: 'FOR 2 ou AGI 2, Luta Treinado',
+    description: 'Você recebe +2 para escapar de Agarrar e, quando um infectado erra uma tentativa de Agarrar contra você, ele fica Vulnerável contra seu próximo golpe.',
+  },
+  {
+    id: 'cirurgiao-de-campo',
+    name: 'Cirurgião de Campo',
+    category: 'Medicina & Ciência',
+    prerequisite: 'INT 2, Medicina Treinado',
+    description: 'Ao realizar Primeiros Socorros ou Estancar Sangramento com suprimento médico, você soma seu INT aos PV recuperados e reduz a DT de tratamento em 2.',
+  },
+  {
+    id: 'protocolo-de-descontaminacao',
+    name: 'Protocolo de Descontaminação',
+    category: 'Medicina & Ciência',
+    prerequisite: 'INT 2, Ciência ou Medicina Treinado',
+    description: 'Quando limpa uma ferida imediatamente após exposição a sangue ou mordida superficial, reduz o ganho de Infecção em 5% (mínimo 1%).',
+  },
+  {
+    id: 'improvisador-nato',
+    name: 'Improvisador Nato',
+    category: 'Sobrevivência',
+    prerequisite: 'INT 2, Fabricação Treinado',
+    description: 'Você cria itens improvisados (bandagens, tochas, barricadas leves) na metade do tempo e gasta 1 material básico a menos uma vez por cena.',
+  },
+  {
+    id: 'estomago-de-ferro',
+    name: 'Estômago de Ferro',
+    category: 'Sobrevivência',
+    prerequisite: 'VIG 2, Fortitude Treinado',
+    description: 'Você recebe +5 em testes de Fortitude contra água/comida duvidosa, toxinas e fumaça, e demora +4 horas antes de sofrer efeitos de Fome.',
+  },
+  {
+    id: 'passo-fantasma',
+    name: 'Passo Fantasma',
+    category: 'Furtividade & Mobilidade',
+    prerequisite: 'AGI 2, Furtividade Treinado',
+    description: 'Você pode se mover em deslocamento normal enquanto Furtivo sem sofrer a penalidade padrão de velocidade.',
+  },
+  {
+    id: 'corredor-de-telhados',
+    name: 'Corredor de Telhados',
+    category: 'Furtividade & Mobilidade',
+    prerequisite: 'AGI 2, Acrobacia e Atletismo Treinados',
+    description: 'Reduz o dano de quedas em 2d6 e recebe +2 em testes de Perseguição em ambientes urbanos com obstáculos.',
+  },
+  {
+    id: 'manejo-ultravioleta',
+    name: 'Manejo Ultravioleta',
+    category: 'Sobrevivência',
+    prerequisite: 'Percepção ou Sobrevivência Treinado',
+    description: 'Ao usar lanternas ou sinalizadores UV contra criaturas Fotossensíveis, você otimiza a bateria/carga e impõe -2 adicional no ataque da criatura.',
+  },
+  {
+    id: 'sangue-frio',
+    name: 'Sangue Frio',
+    category: 'Mental & Liderança',
+    prerequisite: 'PRE 2, Vontade Treinado',
+    description: 'Uma vez por cena, ao sofrer perda de Sanidade (SAN), você reduz a perda em um valor igual ao seu PRE + 2.',
+  },
+  {
+    id: 'voz-de-comando',
+    name: 'Voz de Comando',
+    category: 'Mental & Liderança',
+    prerequisite: 'PRE 2, Liderança Treinado',
+    description: 'Como Ação de Movimento, escolha um aliado que possa ouvir você; ele recebe +2 no próximo teste de ataque ou Vontade até o fim do turno dele.',
+  },
+];
+

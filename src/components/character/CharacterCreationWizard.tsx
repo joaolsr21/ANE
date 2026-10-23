@@ -24,12 +24,14 @@ import {
 } from '../../hooks/useCharacterCreator';
 import { AttributeKey, ATTRIBUTE_DICE_FORMULA } from '../../hooks/useDiceRoller';
 import { SkillRank } from '../../types/database';
+import { AvatarPortrait } from '../common/AvatarPortrait';
 
 interface CharacterCreationWizardProps {
   campaigns: Array<{ id: string; name: string }>;
   onCompleteCreation: (payload: {
     name: string;
     archetype: string;
+    avatar_url?: string | null;
     campaign_id: string | null;
     is_npc: boolean;
     pv_max: number;
@@ -108,6 +110,7 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
   } = useCharacterCreator();
 
   const [originSearch, setOriginSearch] = React.useState('');
+  const [avatarUrl, setAvatarUrl] = React.useState<string | null>(null);
   const [selectedCampaignId, setSelectedCampaignId] = React.useState<string>(
     campaigns[0]?.id || ''
   );
@@ -129,6 +132,7 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
       await onCompleteCreation({
         name: identity.name.trim(),
         archetype: `${selectedOrigin.title} (${selectedOrigin.abilityName}) • ${identity.concept.trim()}`,
+        avatar_url: avatarUrl,
         campaign_id: selectedCampaignId || null,
         is_npc: false,
         pv_max: derivedStats.pv,
@@ -157,7 +161,7 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
         <div className="flex items-center justify-between mb-4">
           <div>
             <span className="text-[11px] font-mono uppercase tracking-widest text-secondary-uv">
-              PROTOCOLO DE CRIAÇÃO OFICIAL // CAPÍTULO 03
+              CRIAÇÃO DE PERSONAGEM
             </span>
             <h2 className="text-xl font-extrabold text-text-main">
               Novo Sobrevivente: Passo {currentStep} de 5
@@ -229,11 +233,29 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
           <div className="max-w-3xl mx-auto space-y-5">
             <div>
               <h3 className="text-lg font-bold text-text-main">
-                1. Quem Você Era & Conceito (Cap. 3.1 e 3.2)
+                1. Quem Você Era & Conceito
               </h3>
               <p className="text-xs text-muted-ash">
                 Quem era seu Sobrevivente antes do colapso e quem ele está tentando ser agora?
               </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center gap-5 bg-bg-main p-4 rounded-xl border border-muted-ash/20">
+              <AvatarPortrait
+                imageUrl={avatarUrl}
+                name={identity.name || 'NV'}
+                size="xl"
+                editable={true}
+                onChangeImage={setAvatarUrl}
+              />
+              <div className="space-y-1 text-center sm:text-left">
+                <span className="text-xs font-bold text-text-main block">
+                  Foto do Personagem (Opcional)
+                </span>
+                <p className="text-[11px] text-muted-ash">
+                  Passe o mouse sobre o retrato ao lado para <strong>enviar uma imagem do dispositivo</strong>, <strong>colar um link (URL)</strong> ou <strong>excluir a foto</strong>. Você também poderá alterá-la depois na aba de Personagens.
+                </p>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
@@ -301,13 +323,13 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
           </div>
         )}
 
-        {/* PASSO 2: AS 35 ORIGENS OFICIAIS (CAPÍTULO 04) */}
+        {/* PASSO 2: AS 35 ORIGENS OFICIAIS */}
         {currentStep === 2 && (
           <div className="space-y-5">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div>
                 <h3 className="text-lg font-bold text-text-main">
-                  2. Escolha sua Origem (35 Origens Oficiais — Cap. 04)
+                  2. Escolha sua Origem
                 </h3>
                 <p className="text-xs text-muted-ash">
                   Clique em uma Origem para ver sua{' '}
@@ -456,7 +478,7 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-bg-main p-4 rounded-xl border border-muted-ash/20">
               <div>
                 <h3 className="text-lg font-bold text-text-main">
-                  3. Distribuição de Atributos (Cap. 3.4)
+                  3. Distribuição de Atributos
                 </h3>
                 <p className="text-xs text-muted-ash">
                   Todos começam em <strong>1</strong>. Distribua <strong>6 pontos</strong>. Nenhum Atributo pode começar acima de{' '}
@@ -616,7 +638,7 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
                 <div>
                   <h4 className="text-base font-bold text-text-main">
                     Escolha suas Perícias Adicionais (2 + INT {attributes.INT} ={' '}
-                    {maxExtraSkillsAllowed}) — Cap. 3.6 e Cap. 05 (28 Perícias)
+                    {maxExtraSkillsAllowed})
                   </h4>
                   <p className="text-xs text-muted-ash">
                     Selecione exatamente {maxExtraSkillsAllowed} perícias diferentes das concedidas pela Origem.
@@ -684,7 +706,7 @@ export const CharacterCreationWizard: React.FC<CharacterCreationWizardProps> = (
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h3 className="text-lg font-bold text-text-main">
-                  5. Revisão da Ficha & Valores Derivados (Cap. 3.8)
+                  5. Revisão da Ficha & Valores Derivados
                 </h3>
                 <p className="text-xs text-muted-ash">
                   Confira as escolhas e os valores derivados antes de salvar a ficha.

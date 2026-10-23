@@ -16,7 +16,6 @@ const DEFAULT_SKILLS: Character['skills'] = {
 };
 
 export function useCampaigns(userId?: string) {
-  // Inicia totalmente vazio (sem dados pré-populados)
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -54,7 +53,6 @@ export function useCampaigns(userId?: string) {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  // Criar nova Campanha (usuário assume papel de Mestre)
   const createCampaign = async (name: string, description: string) => {
     if (!userId) return;
 
@@ -65,7 +63,6 @@ export function useCampaigns(userId?: string) {
       .single();
 
     if (error) {
-      // Fallback em memória da sessão caso o SQL ainda não tenha sido rodado no Supabase
       const localCamp: Campaign = {
         id: `camp-${Date.now()}`,
         name,
@@ -85,13 +82,11 @@ export function useCampaigns(userId?: string) {
     return data as Campaign;
   };
 
-  // Excluir Campanha (apenas Mestre)
   const deleteCampaign = async (campaignId: string) => {
     setCampaigns((prev) => prev.filter((c) => c.id !== campaignId));
     await supabase.from('campaigns').delete().eq('id', campaignId);
   };
 
-  // Ingressar em Campanha via Código (Jogador)
   const joinCampaignByCode = async (inviteCode: string) => {
     const { data, error } = await supabase.rpc('join_campaign_by_code', {
       code: inviteCode,
@@ -101,12 +96,12 @@ export function useCampaigns(userId?: string) {
     return data;
   };
 
-  // Criar Personagem (Jogador) ou Monstro/NPC (Mestre)
   const createCharacter = async (params: {
     name: string;
     archetype: string;
     campaign_id: string | null;
     is_npc: boolean;
+    avatar_url?: string | null;
     pv_max?: number;
     san_max?: number;
     attr_for?: number;
@@ -134,6 +129,7 @@ export function useCampaigns(userId?: string) {
       campaign_id: params.campaign_id,
       name: params.name,
       archetype: params.archetype || (params.is_npc ? 'Monstro / Ameaça' : 'Sobrevivente'),
+      avatar_url: params.avatar_url ?? null,
       is_npc: params.is_npc,
       attr_for,
       attr_agi,
@@ -166,7 +162,6 @@ export function useCampaigns(userId?: string) {
     if (error) {
       const localChar: Character = {
         id: `char-${Date.now()}`,
-        avatar_url: null,
         ...payload,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -179,7 +174,6 @@ export function useCampaigns(userId?: string) {
     return data as Character;
   };
 
-  // Atualizar Ficha (Jogador na própria ficha ou Mestre em qualquer ficha/monstro da campanha)
   const updateCharacter = async (updatedChar: Character) => {
     setCharacters((prev) =>
       prev.map((c) => (c.id === updatedChar.id ? updatedChar : c))
@@ -190,6 +184,7 @@ export function useCampaigns(userId?: string) {
       .update({
         name: updatedChar.name,
         archetype: updatedChar.archetype,
+        avatar_url: updatedChar.avatar_url,
         campaign_id: updatedChar.campaign_id,
         is_npc: updatedChar.is_npc,
         attr_for: updatedChar.attr_for,
@@ -223,7 +218,6 @@ export function useCampaigns(userId?: string) {
     return data as Character;
   };
 
-  // Excluir Ficha ou Monstro
   const deleteCharacter = async (characterId: string) => {
     setCharacters((prev) => prev.filter((c) => c.id !== characterId));
     await supabase.from('characters').delete().eq('id', characterId);

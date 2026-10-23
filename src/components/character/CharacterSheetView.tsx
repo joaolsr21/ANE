@@ -14,6 +14,12 @@ import {
   Droplets,
   AlertTriangle,
   Eye,
+  ArrowLeft,
+  Sparkles,
+  MessageSquare,
+  Plus,
+  Trash2,
+  FolderOpen,
 } from 'lucide-react';
 import { Character, SkillRank } from '../../types/database';
 import {
@@ -21,28 +27,39 @@ import {
   ATTRIBUTE_DICE_FORMULA,
   SKILL_RANK_LABELS,
   useDiceRoller,
+  DiceRollResult,
 } from '../../hooks/useDiceRoller';
 import {
   ALL_ANE_SKILLS,
   ANE_CONDITIONS,
+  ANE_ORIGINS,
+  ANE_GENERAL_ABILITIES,
   getInfectionStageInfo,
   getSanityStateInfo,
 } from '../../data/aneSystemRules';
 import { CharacterCreationWizard } from './CharacterCreationWizard';
-import { SpatialGridInventory } from './SpatialGridInventory';
+import { SpatialGridInventory, SpatialGridItem } from './SpatialGridInventory';
 import { AnatomicalWound, BodyWoundDiagram } from './BodyWoundDiagram';
+import { AvatarPortrait } from '../common/AvatarPortrait';
 
 interface CharacterSheetViewProps {
   characters: Character[];
   campaigns: Array<{ id: string; name: string }>;
   onUpdateCharacter: (updated: Character) => void;
   onCreateCharacter: (params: any) => Promise<any>;
+  onDeleteCharacter?: (id: string) => Promise<any>;
+  // Callbacks opcionais para enviar logs ao Chat da Campanha
+  onSendRollToChat?: (roll: DiceRollResult) => void;
+  onSendAbilityToChat?: (characterName: string, abilityName: string, description: string) => void;
+  onSendConsumeItemToChat?: (characterName: string, itemName: string, description: string) => void;
+  onSendShareItemToChat?: (characterName: string, itemName: string, description: string) => void;
 }
 
-// Helpers para ler/gravar ferimentos anatômicos e condições dentro de character.inventory
+// Helpers para ler/gravar ferimentos anatômicos, condições e habilidades adquiridas dentro de character.inventory
 export function extractWoundsAndMeta(char: Character): {
   wounds: AnatomicalWound[];
   conditions: string[];
+  generalAbilities: string[];
   dyingSuccesses: number;
   dyingFailures: number;
 } {
@@ -51,6 +68,7 @@ export function extractWoundsAndMeta(char: Character): {
   return {
     wounds: metaNode?.wounds || [],
     conditions: metaNode?.conditions || [],
+    generalAbilities: metaNode?.generalAbilities || ['manejo-ultravioleta', 'sangue-frio'],
     dyingSuccesses: metaNode?.dyingSuccesses ?? 0,
     dyingFailures: metaNode?.dyingFailures ?? 0,
   };
@@ -61,6 +79,7 @@ export function buildInventoryWithMeta(
   patch: Partial<{
     wounds: AnatomicalWound[];
     conditions: string[];
+    generalAbilities: string[];
     dyingSuccesses: number;
     dyingFailures: number;
   }>
@@ -77,6 +96,7 @@ export function buildInventoryWithMeta(
       _meta: 'ane_v2',
       wounds: patch.wounds ?? current.wounds,
       conditions: patch.conditions ?? current.conditions,
+      generalAbilities: patch.generalAbilities ?? current.generalAbilities,
       dyingSuccesses: patch.dyingSuccesses ?? current.dyingSuccesses,
       dyingFailures: patch.dyingFailures ?? current.dyingFailures,
     },
@@ -88,23 +108,35 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
   campaigns,
   onUpdateCharacter,
   onCreateCharacter,
+  onDeleteCharacter,
+  onSendRollToChat,
+  onSendAbilityToChat,
+  onSendConsumeItemToChat,
+  onSendShareItemToChat,
 }) => {
   const playerChars = characters.filter((c) => !c.is_npc);
-  const [selectedId, setSelectedId] = useState<string>(playerChars[0]?.id || '');
-  const [showWizard, setShowWizard] = useState<boolean>(playerChars.length === 0);
+
+  // selectedId === null significa que o usuário está vendo a grade de cartões estilo CRIS
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showWizard, setShowWizard] = useState<boolean>(false);
   const [flatModifier, setFlatModifier] = useState<number>(0);
   const [applySystemPenalties, setApplySystemPenalties] = useState<boolean>(true);
+  const [selectedNewAbilityId, setSelectedNewAbilityId] = useState<string>(
+    ANE_GENERAL_ABILITIES[0]?.id || ''
+  );
 
   const { lastRoll, rollHistory, rollAttributeOrSkill, clearHistory } = useDiceRoller();
 
-  const activeChar =
-    playerChars.find((c) => c.id === selectedId) || playerChars[0];
+  const activeChar = playerChars.find((c) => c.id === selectedId) || null;
 
-  if (showWizard || !activeChar) {
+  // ==========================================================================
+  // 1. TELA DE CRIAÇÃO DE PERSONAGEM
+  // ==========================================================================
+  if (showWizard) {
     return (
       <CharacterCreationWizard
         campaigns={campaigns}
-        onCancel={playerChars.length > 0 ? () => setShowWizard(false) : undefined}
+        onCancel={() => setShowWizard(false)}
         onCompleteCreation={async (payload) => {
           const created = await onCreateCharacter(payload);
           if (created?.id) {
@@ -116,11 +148,208 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
     );
   }
 
+  // ==========================================================================
+  // 2. GRADE DE CARTÕES DE PERSONAGENS (ESTILO CRIS) — QUANDO NENHUMA FICHA ESTÁ ABERTA
+  // ==========================================================================
+  if (!activeChar) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-bg-card border border-muted-ash/20 rounded-xl p-6">
+          <div>
+            <span className="text-xs font-mono uppercase tracking-widest text-secondary-uv">
+              ANE // Galeria de Sobreviventes
+            </span>
+            <h2 className="text-2xl font-bold text-text-main mt-1">
+              Personagens ({playerChars.length})
+            </h2>
+            <p className="text-xs text-muted-ash mt-1">
+              Clique no cartão com a foto e nome do seu personagem para abrir a ficha completa, ou passe o mouse na foto para adicionar, alterar ou excluir o retrato.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowWizard(true)}
+            className="px-4 py-2.5 rounded-xl bg-primary-blood hover:bg-primary-blood/90 text-text-main text-xs font-bold flex items-center gap-2 shadow-blood-glow transition-all shrink-0"
+          >
+            <UserPlus className="w-4 h-4" />
+            Criar Novo Personagem
+          </button>
+        </div>
+
+        {/* Grade de Cartões Estilo CRIS */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {playerChars.map((char) => {
+            const pvPct = Math.max(
+              0,
+              Math.min(100, Math.round((char.pv_current / Math.max(1, char.pv_max)) * 100))
+            );
+            const sanPct = Math.max(
+              0,
+              Math.min(100, Math.round((char.san_current / Math.max(1, char.san_max)) * 100))
+            );
+            const campObj = campaigns.find((c) => c.id === char.campaign_id);
+
+            return (
+              <div
+                key={char.id}
+                className="bg-bg-card border border-muted-ash/20 hover:border-secondary-uv rounded-2xl p-5 flex flex-col justify-between gap-4 transition-all shadow-xl group"
+              >
+                <div className="space-y-4">
+                  {/* Botão Principal com Foto + Nome (Clicar abre a ficha) */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div
+                      onClick={() => setSelectedId(char.id)}
+                      className="cursor-pointer flex items-center gap-3.5 flex-1 min-w-0"
+                    >
+                      <AvatarPortrait
+                        imageUrl={char.avatar_url}
+                        name={char.name}
+                        size="lg"
+                        editable={true}
+                        onChangeImage={(newUrl) =>
+                          onUpdateCharacter({ ...char, avatar_url: newUrl })
+                        }
+                      />
+                      <div className="min-w-0">
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-secondary-uv block">
+                          {campObj ? `Campanha: ${campObj.name}` : 'Sem Campanha'}
+                        </span>
+                        <h3 className="text-lg font-extrabold text-text-main truncate group-hover:text-secondary-uv transition-colors">
+                          {char.name}
+                        </h3>
+                        <p className="text-xs text-muted-ash line-clamp-2 mt-0.5">
+                          {char.archetype}
+                        </p>
+                      </div>
+                    </div>
+
+                    {onDeleteCharacter && (
+                      <button
+                        type="button"
+                        onClick={() => onDeleteCharacter(char.id)}
+                        title="Excluir personagem"
+                        className="p-1.5 rounded-lg bg-bg-main border border-muted-ash/20 text-muted-ash hover:text-primary-blood transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Resumo dos 5 Atributos no Card */}
+                  <div className="grid grid-cols-5 gap-1.5 bg-bg-main p-2.5 rounded-xl border border-muted-ash/15 text-center">
+                    {(
+                      [
+                        { k: 'FOR', v: char.attr_for },
+                        { k: 'AGI', v: char.attr_agi },
+                        { k: 'INT', v: char.attr_int },
+                        { k: 'PRE', v: char.attr_pre },
+                        { k: 'VIG', v: char.attr_vig },
+                      ] as const
+                    ).map((a) => (
+                      <div key={a.k}>
+                        <div className="text-[9px] font-mono text-muted-ash">{a.k}</div>
+                        <div className="text-sm font-bold font-mono text-text-main">
+                          {a.v}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Barras Vitais (PV, SAN, Infecção) */}
+                  <div className="space-y-2 text-xs">
+                    <div>
+                      <div className="flex justify-between mb-1">
+                        <span className="flex items-center gap-1 text-text-main">
+                          <Heart className="w-3 h-3 text-primary-blood" /> PV
+                        </span>
+                        <span className="font-mono font-bold">
+                          {char.pv_current}/{char.pv_max}
+                        </span>
+                      </div>
+                      <div className="w-full h-1.5 bg-bg-main rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary-blood"
+                          style={{ width: `${pvPct}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between mb-1">
+                        <span className="flex items-center gap-1 text-text-main">
+                          <Brain className="w-3 h-3 text-warning-rust" /> SAN
+                        </span>
+                        <span className="font-mono font-bold">
+                          {char.san_current}/{char.san_max}
+                        </span>
+                      </div>
+                      <div className="w-full h-1.5 bg-bg-main rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-warning-rust"
+                          style={{ width: `${sanPct}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1 text-[11px] font-mono text-muted-ash">
+                      <span>DEF {char.defense} • LF {char.wound_threshold}</span>
+                      <span className="text-primary-blood font-bold">
+                        Infecção: {char.infection_level}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Botão Clicável para Abrir a Ficha */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedId(char.id)}
+                  className="w-full py-2.5 px-4 rounded-xl bg-secondary-uv hover:bg-secondary-uv/90 text-text-main text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-uv-glow transition-all"
+                >
+                  <FolderOpen className="w-4 h-4" />
+                  Acessar Ficha de {char.name}
+                </button>
+              </div>
+            );
+          })}
+
+          {/* Card extra estilo CRIS para Criar Novo Personagem */}
+          <button
+            type="button"
+            onClick={() => setShowWizard(true)}
+            className="min-h-[280px] bg-bg-card/50 hover:bg-bg-card border-2 border-dashed border-muted-ash/30 hover:border-primary-blood rounded-2xl p-6 flex flex-col items-center justify-center gap-3 text-center transition-all group"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-primary-blood/20 border border-primary-blood flex items-center justify-center group-hover:scale-105 transition-transform shadow-blood-glow">
+              <UserPlus className="w-7 h-7 text-primary-blood" />
+            </div>
+            <div>
+              <div className="text-base font-bold text-text-main">
+                Criar Novo Personagem
+              </div>
+              <p className="text-xs text-muted-ash mt-1 max-w-xs">
+                Escolha sua Origem, foto, atributos e perícias para adicionar um novo sobrevivente.
+              </p>
+            </div>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ==========================================================================
+  // 3. FICHA COMPLETA ABERTA DO PERSONAGEM SELECIONADO
+  // ==========================================================================
   const meta = extractWoundsAndMeta(activeChar);
   const infectionInfo = getInfectionStageInfo(activeChar.infection_level);
   const sanityInfo = getSanityStateInfo(activeChar.san_current, activeChar.san_max);
 
-  // Cálculo de Percepção Passiva oficial (Cap. 2.7 / Cap. 5): 8 + PRE + bônus de Percepção
+  // Detecta a Origem Oficial do personagem pelo título presente em archetype
+  const matchedOrigin = ANE_ORIGINS.find((o) =>
+    activeChar.archetype.toLowerCase().includes(o.title.toLowerCase())
+  );
+
+  // Cálculo de Percepção Passiva oficial: 8 + PRE + bônus de Percepção
   const perceptionRank: SkillRank = (activeChar.skills?.['Percepcao'] ?? 0) as SkillRank;
   const passivePerception =
     8 + activeChar.attr_pre + SKILL_RANK_LABELS[perceptionRank].bonus;
@@ -176,12 +405,10 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
     });
   };
 
-  // Calcula modificadores automáticos do Livro (Fadiga Cap. 12.5.2 + Estágios de Infecção Cap. 14.2)
   const getSystemModifierForTest = (attr: AttributeKey, skillKey?: string): number => {
     if (!applySystemPenalties) return 0;
     let mod = 0;
 
-    // 1. Fadiga (Nível 1 Cansado: -2 em FOR, AGI, VIG | Nível 2 Exausto: -2 em todos)
     if (activeChar.fatigue >= 2) {
       mod -= 2;
     } else if (
@@ -191,7 +418,6 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
       mod -= 2;
     }
 
-    // 2. Estágios de Infecção (Cap. 14.2)
     if (attr === 'FOR') {
       mod += infectionInfo.forBonus;
     }
@@ -215,7 +441,7 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
     const sysMod = getSystemModifierForTest(attr, skillKey);
     const effectiveMod = flatModifier + sysMod;
 
-    rollAttributeOrSkill({
+    const result = rollAttributeOrSkill({
       characterName: activeChar.name,
       label,
       attributeKey: attr,
@@ -223,6 +449,10 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
       skillRank,
       flatModifier: effectiveMod,
     });
+
+    if (onSendRollToChat) {
+      onSendRollToChat(result);
+    }
   };
 
   const adjustStat = (
@@ -244,6 +474,30 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
     });
   };
 
+  const handleConsumePortion = (type: 'food' | 'water') => {
+    if (type === 'food') {
+      if (activeChar.food_portions <= 0) return;
+      adjustStat('food_portions', -1, 20);
+      if (onSendConsumeItemToChat) {
+        onSendConsumeItemToChat(
+          activeChar.name,
+          'Porção de Comida / Ração',
+          `${activeChar.name} consumiu 1 Porção de Comida (Sustenta por 12 horas). Restam ${activeChar.food_portions - 1} porções.`
+        );
+      }
+    } else {
+      if (activeChar.water_portions <= 0) return;
+      adjustStat('water_portions', -1, 20);
+      if (onSendConsumeItemToChat) {
+        onSendConsumeItemToChat(
+          activeChar.name,
+          'Porção de Água Potável',
+          `${activeChar.name} bebeu 1 Porção de Água (Hidrata por 8 horas). Restam ${activeChar.water_portions - 1} porções.`
+        );
+      }
+    }
+  };
+
   const handleToggleCondition = (condId: string) => {
     const exists = meta.conditions.includes(condId);
     const nextConds = exists
@@ -256,34 +510,72 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
     });
   };
 
+  const handleAddGeneralAbility = () => {
+    if (!selectedNewAbilityId) return;
+    if (meta.generalAbilities.includes(selectedNewAbilityId)) return;
+    const nextAbilities = [...meta.generalAbilities, selectedNewAbilityId];
+    onUpdateCharacter({
+      ...activeChar,
+      inventory: buildInventoryWithMeta(activeChar, {
+        generalAbilities: nextAbilities,
+      }) as any,
+    });
+  };
+
+  const handleRemoveGeneralAbility = (abilityId: string) => {
+    const nextAbilities = meta.generalAbilities.filter((id) => id !== abilityId);
+    onUpdateCharacter({
+      ...activeChar,
+      inventory: buildInventoryWithMeta(activeChar, {
+        generalAbilities: nextAbilities,
+      }) as any,
+    });
+  };
+
   return (
     <div className="space-y-6">
-      {/* Seletor de Ficha e Cabeçalho */}
+      {/* Cabeçalho da Ficha Aberta com Foto Editável e Botão Voltar para Personagens */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-bg-card border border-muted-ash/20 rounded-xl p-5">
-        <div>
-          <span className="text-xs font-mono uppercase tracking-widest text-secondary-uv">
-            ANE // Ficha Oficial do Sobrevivente
-          </span>
-          <h2 className="text-xl font-bold text-text-main mt-0.5">
-            {activeChar.name} —{' '}
-            <span className="text-muted-ash font-normal text-sm">
-              {activeChar.archetype}
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => setSelectedId(null)}
+            className="p-2.5 rounded-xl bg-bg-main border border-muted-ash/25 text-muted-ash hover:text-text-main hover:border-secondary-uv transition-colors"
+            title="Voltar para a galeria de Personagens"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+
+          <AvatarPortrait
+            imageUrl={activeChar.avatar_url}
+            name={activeChar.name}
+            size="lg"
+            editable={true}
+            onChangeImage={(newUrl) =>
+              onUpdateCharacter({ ...activeChar, avatar_url: newUrl })
+            }
+          />
+
+          <div>
+            <span className="text-xs font-mono uppercase tracking-widest text-secondary-uv">
+              ANE // Ficha do Sobrevivente
             </span>
-          </h2>
+            <h2 className="text-xl font-bold text-text-main mt-0.5">
+              {activeChar.name}
+            </h2>
+            <p className="text-xs text-muted-ash">{activeChar.archetype}</p>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <select
-            value={activeChar.id}
-            onChange={(e) => setSelectedId(e.target.value)}
-            className="bg-bg-main border border-muted-ash/30 rounded-lg px-3.5 py-2 text-xs font-semibold text-text-main focus:outline-none focus:border-secondary-uv"
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => setSelectedId(null)}
+            className="px-3.5 py-2 rounded-lg bg-bg-main border border-muted-ash/30 hover:border-secondary-uv text-text-main text-xs font-semibold flex items-center gap-1.5 transition-all"
           >
-            {playerChars.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name} ({c.archetype})
-              </option>
-            ))}
-          </select>
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Todos os Personagens
+          </button>
 
           <button
             type="button"
@@ -291,19 +583,19 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
             className="px-3.5 py-2 rounded-lg bg-primary-blood hover:bg-primary-blood/90 text-text-main text-xs font-bold flex items-center gap-1.5 shadow-blood-glow transition-all"
           >
             <UserPlus className="w-4 h-4" />
-            Novo Personagem (Wizard CRIS)
+            Criação de Personagem
           </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* COLUNA ESQUERDA: Atributos, Derivados, Corpo/Ferimentos e 28 Perícias (8 cols) */}
+        {/* COLUNA ESQUERDA: Atributos, Derivados, Habilidades, Corpo/Ferimentos e 28 Perícias (8 cols) */}
         <div className="lg:col-span-8 space-y-6">
           {/* 1. Atributos Base (1 a 5) */}
           <div className="bg-bg-card border border-muted-ash/20 rounded-xl p-5 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold uppercase tracking-wider text-text-main">
-                Atributos (FOR, AGI, INT, PRE, VIG) — Cap. 02
+                Atributos (FOR, AGI, INT, PRE, VIG)
               </h3>
               <span className="text-[11px] font-mono text-muted-ash">
                 1=1d20 | 2=+1d6 | 3=+1d8 | 4=+1d12 | 5=2d20
@@ -406,7 +698,7 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
               </div>
             </div>
 
-            {/* PV, SAN (com Estado) e Infecção (com Estágio e Exposição Rápida) */}
+            {/* PV, SAN e Infecção */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
               {/* PV */}
               <div className="bg-bg-main border border-primary-blood/40 rounded-lg p-3.5 space-y-2">
@@ -471,7 +763,7 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
                 </div>
               </div>
 
-              {/* Sanidade (Cap. 13) */}
+              {/* Sanidade */}
               <div className="bg-bg-main border border-warning-rust/40 rounded-lg p-3.5 space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-semibold text-text-main flex items-center gap-1.5">
@@ -528,7 +820,7 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
                 </div>
               </div>
 
-              {/* Infecção (Cap. 14) */}
+              {/* Infecção */}
               <div className="bg-bg-main border border-primary-blood/50 rounded-lg p-3.5 space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-semibold text-text-main flex items-center gap-1.5">
@@ -591,21 +883,24 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
               </div>
             </div>
 
-            {/* Porções de Comida (1/12h), Água (1/8h), Fadiga (0 a 3) e Descanso Curto/Longo */}
+            {/* Porções de Comida, Água (com botão Consumir -> Loga no Chat), Fadiga e Descanso */}
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2 border-t border-muted-ash/15 text-xs">
               <div className="bg-bg-main rounded-lg p-2.5 border border-warning-rust/30 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <Utensils className="w-3.5 h-3.5 text-warning-rust" />
                   Comida: <strong>{activeChar.food_portions}</strong>
                 </span>
-                <div className="flex gap-1">
+                <div className="flex items-center gap-1">
                   <button
-                    onClick={() => adjustStat('food_portions', -1, 20)}
-                    className="px-1.5 py-0.5 rounded bg-bg-card border border-muted-ash/25"
+                    type="button"
+                    onClick={() => handleConsumePortion('food')}
+                    title="Consumir 1 porção de comida (Envia ao Chat da Campanha)"
+                    className="px-2 py-0.5 rounded bg-warning-rust text-text-main text-[10px] font-bold"
                   >
-                    -
+                    Consumir
                   </button>
                   <button
+                    type="button"
                     onClick={() => adjustStat('food_portions', 1, 20)}
                     className="px-1.5 py-0.5 rounded bg-bg-card border border-muted-ash/25"
                   >
@@ -619,14 +914,17 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
                   <Droplets className="w-3.5 h-3.5 text-secondary-uv" />
                   Água: <strong>{activeChar.water_portions}</strong>
                 </span>
-                <div className="flex gap-1">
+                <div className="flex items-center gap-1">
                   <button
-                    onClick={() => adjustStat('water_portions', -1, 20)}
-                    className="px-1.5 py-0.5 rounded bg-bg-card border border-muted-ash/25"
+                    type="button"
+                    onClick={() => handleConsumePortion('water')}
+                    title="Beber 1 porção de água (Envia ao Chat da Campanha)"
+                    className="px-2 py-0.5 rounded bg-secondary-uv text-text-main text-[10px] font-bold"
                   >
-                    -
+                    Beber
                   </button>
                   <button
+                    type="button"
                     onClick={() => adjustStat('water_portions', 1, 20)}
                     className="px-1.5 py-0.5 rounded bg-bg-card border border-muted-ash/25"
                   >
@@ -656,7 +954,6 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
                 </div>
               </div>
 
-              {/* Botões de Descanso Oficial (Cap. 7.8 / 12.3.1) */}
               <div className="flex gap-1.5">
                 <button
                   type="button"
@@ -690,10 +987,10 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
               </div>
             </div>
 
-            {/* Seletor Rápido das 18 Condições do Apêndice A */}
+            {/* Seletor Rápido das 18 Condições */}
             <div className="pt-2 border-t border-muted-ash/15 space-y-2">
               <span className="text-[11px] font-mono uppercase text-muted-ash block">
-                Condições Ativas (Apêndice A):
+                Condições Ativas:
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {ANE_CONDITIONS.map((cond) => {
@@ -718,7 +1015,134 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
             </div>
           </div>
 
-          {/* 3. DIAGRAMA CORPORAL PADRÃO DE FERIMENTOS & SANGRAMENTO (CAPÍTULO 11) */}
+          {/* 3. HABILIDADE DE ORIGEM & HABILIDADES GERAIS (COM OPÇÃO CLICÁVEL DE MOSTRAR NO CHAT) */}
+          <div className="bg-bg-card border border-muted-ash/20 rounded-xl p-5 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-text-main flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-secondary-uv" />
+                Habilidades de Origem & Habilidades Gerais
+              </h3>
+
+              {/* Adicionar Habilidade Geral */}
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedNewAbilityId}
+                  onChange={(e) => setSelectedNewAbilityId(e.target.value)}
+                  className="bg-bg-main border border-muted-ash/30 rounded-lg px-2.5 py-1.5 text-xs text-text-main focus:outline-none focus:border-secondary-uv"
+                >
+                  {ANE_GENERAL_ABILITIES.map((ab) => (
+                    <option key={ab.id} value={ab.id}>
+                      {ab.name} ({ab.category})
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={handleAddGeneralAbility}
+                  className="px-3 py-1.5 rounded-lg bg-secondary-uv hover:bg-secondary-uv/90 text-text-main text-xs font-bold flex items-center gap-1"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Adicionar
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {/* Habilidade da Origem */}
+              {matchedOrigin && (
+                <div className="bg-bg-main border border-primary-blood/50 rounded-xl p-4 space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <span className="text-[10px] font-mono uppercase text-primary-blood font-bold">
+                        Habilidade de Origem ({matchedOrigin.title})
+                      </span>
+                      <h4 className="text-sm font-extrabold text-text-main">
+                        {matchedOrigin.abilityName}
+                      </h4>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onSendAbilityToChat) {
+                          onSendAbilityToChat(
+                            activeChar.name,
+                            `${matchedOrigin.abilityName} (Origem: ${matchedOrigin.title})`,
+                            matchedOrigin.abilityDescription
+                          );
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-primary-blood/25 hover:bg-primary-blood border border-primary-blood text-text-main text-xs font-bold flex items-center gap-1.5 transition-all"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      Mostrar no Chat
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-ash leading-relaxed">
+                    {matchedOrigin.abilityDescription}
+                  </p>
+                </div>
+              )}
+
+              {/* Habilidades Gerais do Personagem */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {meta.generalAbilities.map((abId) => {
+                  const ab = ANE_GENERAL_ABILITIES.find((a) => a.id === abId);
+                  if (!ab) return null;
+
+                  return (
+                    <div
+                      key={ab.id}
+                      className="bg-bg-main border border-muted-ash/20 hover:border-secondary-uv/60 rounded-xl p-3.5 flex flex-col justify-between gap-2.5 transition-all"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <span className="text-[10px] font-mono uppercase text-secondary-uv">
+                              {ab.category} • Req: {ab.prerequisite}
+                            </span>
+                            <h4 className="text-xs font-extrabold text-text-main">
+                              {ab.name}
+                            </h4>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveGeneralAbility(ab.id)}
+                            title="Remover habilidade"
+                            className="p-1 text-muted-ash hover:text-primary-blood"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-muted-ash leading-relaxed">
+                          {ab.description}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onSendAbilityToChat) {
+                            onSendAbilityToChat(
+                              activeChar.name,
+                              `${ab.name} (${ab.category})`,
+                              ab.description
+                            );
+                          }
+                        }}
+                        className="w-full py-1.5 px-3 rounded-lg bg-bg-card hover:bg-secondary-uv border border-secondary-uv/40 text-text-main text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        Mostrar Habilidade no Chat
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* 4. DIAGRAMA CORPORAL PADRÃO DE FERIMENTOS & SANGRAMENTO */}
           <BodyWoundDiagram
             entityName={activeChar.name}
             isNpc={false}
@@ -748,7 +1172,7 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
             }
           />
 
-          {/* 4. Lista das 28 Perícias Oficiais (Cap. 05) */}
+          {/* 5. Lista das 28 Perícias Oficiais */}
           <div className="bg-bg-card border border-muted-ash/20 rounded-xl p-5 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <h3 className="text-sm font-bold uppercase tracking-wider text-text-main flex items-center gap-2">
@@ -840,7 +1264,7 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
             <div className="flex items-center justify-between border-b border-muted-ash/15 pb-3">
               <div>
                 <span className="text-[10px] font-mono uppercase tracking-widest text-secondary-uv">
-                  Motor de Dados ANE (Cap. 02)
+                  Motor de Dados ANE
                 </span>
                 <h3 className="text-base font-bold text-text-main flex items-center gap-2">
                   <Dices className="w-5 h-5 text-secondary-uv" />
@@ -859,11 +1283,10 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
               )}
             </div>
 
-            {/* Modificador de Circunstância (±2 ou ±5, limite ±5 — Cap. 2.9) */}
             <div className="bg-bg-main border border-muted-ash/20 rounded-lg p-3.5 space-y-3 text-xs">
               <div className="flex items-center justify-between">
                 <span className="text-muted-ash font-medium">
-                  Mod. de Circunstância (Cap. 2.9):
+                  Mod. de Circunstância:
                 </span>
                 <div className="flex items-center gap-1">
                   {[-5, -2, 0, 2, 5].map((val) => (
@@ -896,7 +1319,7 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
               </label>
             </div>
 
-            {/* Referência Rápida de DTs (Cap. 2.5) */}
+            {/* Referência Rápida de DTs */}
             <div className="grid grid-cols-6 gap-1 text-center text-[10px] font-mono bg-bg-main p-2 rounded-lg border border-muted-ash/15">
               <div>
                 <div className="text-muted-ash">Rotin.</div>
@@ -954,16 +1377,6 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
                   <div>
                     Perícia: +{lastRoll.skillBonus} | Mod: {lastRoll.flatModifier >= 0 ? `+${lastRoll.flatModifier}` : lastRoll.flatModifier}
                   </div>
-                  {lastRoll.isCriticalSuccess && (
-                    <div className="text-secondary-uv font-bold">
-                      ★ 20 Natural no d20 (Vantagem narrativa / Crítico se atingir a DT/DEF)!
-                    </div>
-                  )}
-                  {lastRoll.isCriticalFailure && (
-                    <div className="text-primary-blood font-bold">
-                      ☠ 1 Natural no d20 (Atenção a regras específicas de Armas/Morrendo)!
-                    </div>
-                  )}
                 </div>
               </div>
             ) : (
@@ -999,8 +1412,31 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
         </div>
       </div>
 
-      {/* MÓDULO 2: INVENTÁRIO EM GRADE ESPACIAL (CAP. 15 & 16) */}
-      <SpatialGridInventory />
+      {/* MÓDULO 2: INVENTÁRIO EM GRADE ESPACIAL COM LOGS DE CONSUMO E ITEM NO CHAT */}
+      <SpatialGridInventory
+        characterName={activeChar.name}
+        onConsumeResource={(cat, item: SpatialGridItem) => {
+          if (cat === 'water') {
+            adjustStat('water_portions', 2, 20);
+          } else if (cat === 'ration') {
+            adjustStat('food_portions', 1, 20);
+          } else if (cat === 'medical') {
+            adjustStat('pv_current', 5, activeChar.pv_max);
+          }
+          if (onSendConsumeItemToChat) {
+            onSendConsumeItemToChat(
+              activeChar.name,
+              item.name,
+              `${activeChar.name} utilizou/consumiu [${item.name}] da mochila (${item.statsSummary}).`
+            );
+          }
+        }}
+        onShareItemToChat={(item: SpatialGridItem) => {
+          if (onSendShareItemToChat) {
+            onSendShareItemToChat(activeChar.name, item.name, item.statsSummary);
+          }
+        }}
+      />
     </div>
   );
 };

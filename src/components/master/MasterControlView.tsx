@@ -17,16 +17,19 @@ import {
   Footprints,
   Flame,
   HeartPulse,
+  MessageSquare,
 } from 'lucide-react';
 import { Campaign, Character } from '../../types/database';
 import {
   AttributeKey,
   ATTRIBUTE_DICE_FORMULA,
   useDiceRoller,
+  DiceRollResult,
 } from '../../hooks/useDiceRoller';
 import { ANE_INFECTED_TEMPLATES, InfectedTemplate } from '../../data/aneSystemRules';
 import { BodyWoundDiagram } from '../character/BodyWoundDiagram';
 import { buildInventoryWithMeta, extractWoundsAndMeta } from '../character/CharacterSheetView';
+import { AvatarPortrait } from '../common/AvatarPortrait';
 
 interface MasterControlViewProps {
   campaigns: Campaign[];
@@ -35,6 +38,7 @@ interface MasterControlViewProps {
   onCreateCharacter: (params: {
     name: string;
     archetype: string;
+    avatar_url?: string | null;
     campaign_id: string | null;
     is_npc: boolean;
     pv_max?: number;
@@ -50,6 +54,9 @@ interface MasterControlViewProps {
   }) => Promise<any>;
   onUpdateCharacter: (updated: Character) => Promise<any>;
   onDeleteCharacter: (id: string) => Promise<any>;
+  campaignIdFilter?: string;
+  onSendRollToChat?: (roll: DiceRollResult) => void;
+  onSendAbilityToChat?: (senderName: string, abilityName: string, description: string) => void;
 }
 
 const EXPOSURE_STATES = [
@@ -75,10 +82,13 @@ export const MasterControlView: React.FC<MasterControlViewProps> = ({
   onCreateCharacter,
   onUpdateCharacter,
   onDeleteCharacter,
+  campaignIdFilter,
+  onSendRollToChat,
+  onSendAbilityToChat,
 }) => {
   const masterCampaigns = campaigns.filter((c) => c.master_id === currentUserId);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>(
-    masterCampaigns[0]?.id || campaigns[0]?.id || ''
+    campaignIdFilter || masterCampaigns[0]?.id || campaigns[0]?.id || ''
   );
 
   // Rastreadores de Cenas do Livro (Caps. 08, 09 e 21)
@@ -175,7 +185,7 @@ export const MasterControlView: React.FC<MasterControlViewProps> = ({
       VIG: entity.attr_vig,
     };
 
-    rollAttributeOrSkill({
+    const result = rollAttributeOrSkill({
       characterName: entity.name,
       label: `Teste de ${attr}`,
       attributeKey: attr,
@@ -183,6 +193,10 @@ export const MasterControlView: React.FC<MasterControlViewProps> = ({
       skillRank: 0,
       flatModifier: entity.is_npc ? 0 : -entity.fatigue * 2,
     });
+
+    if (onSendRollToChat) {
+      onSendRollToChat(result);
+    }
   };
 
   return (
@@ -192,38 +206,40 @@ export const MasterControlView: React.FC<MasterControlViewProps> = ({
         <div>
           <span className="text-xs font-mono uppercase tracking-widest text-primary-blood flex items-center gap-1.5">
             <Crown className="w-4 h-4" />
-            Escudo do Mestre // Capítulos 08, 09, 20 e 21
+            Escudo do Mestre & Controle de Monstros
           </span>
           <h2 className="text-xl font-bold text-text-main mt-0.5">
             Bestiário dos Infectados, Corpo de Ferimentos & Controle de Cenas
           </h2>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-ash">Filtrar por Campanha:</span>
-          <select
-            value={selectedCampaignId}
-            onChange={(e) => setSelectedCampaignId(e.target.value)}
-            className="bg-bg-main border border-muted-ash/30 rounded-lg px-3 py-2 text-xs font-semibold text-text-main focus:outline-none focus:border-primary-blood"
-          >
-            <option value="">Todas as Fichas e Monstros</option>
-            {campaigns.map((camp) => (
-              <option key={camp.id} value={camp.id}>
-                {camp.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        {!campaignIdFilter && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-ash">Filtrar por Campanha:</span>
+            <select
+              value={selectedCampaignId}
+              onChange={(e) => setSelectedCampaignId(e.target.value)}
+              className="bg-bg-main border border-muted-ash/30 rounded-lg px-3 py-2 text-xs font-semibold text-text-main focus:outline-none focus:border-primary-blood"
+            >
+              <option value="">Todas as Fichas e Monstros</option>
+              {campaigns.map((camp) => (
+                <option key={camp.id} value={camp.id}>
+                  {camp.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
-      {/* RASTREADORES DE CENAS OFICIAIS DO LIVRO: FURTIVIDADE (CAP 8), PERSEGUIÇÃO (CAP 9) E HORDA (CAP 21) */}
+      {/* RASTREADORES DE CENAS: FURTIVIDADE, PERSEGUIÇÃO E HORDA */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* 1. Furtividade: Exposição 0 a 3 */}
         <div className="bg-bg-card border border-secondary-uv/35 rounded-xl p-4 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-text-main flex items-center gap-1.5">
               <Eye className="w-4 h-4 text-secondary-uv" />
-              Cena de Furtividade (Cap. 08)
+              Cena de Furtividade
             </span>
             <span className="text-xs font-mono text-secondary-uv font-bold">
               Exposição {stealthExposure}/3
@@ -260,7 +276,7 @@ export const MasterControlView: React.FC<MasterControlViewProps> = ({
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-text-main flex items-center gap-1.5">
               <Footprints className="w-4 h-4 text-warning-rust" />
-              Perseguição (Cap. 09)
+              Perseguição
             </span>
             <button
               type="button"
@@ -326,7 +342,7 @@ export const MasterControlView: React.FC<MasterControlViewProps> = ({
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-text-main flex items-center gap-1.5">
               <Flame className="w-4 h-4 text-primary-blood" />
-              Pressão da Horda (Cap. 21)
+              Pressão da Horda
             </span>
             <span className="text-xs font-mono text-primary-blood font-bold">
               Pressão {hordePressure}/5
@@ -360,20 +376,20 @@ export const MasterControlView: React.FC<MasterControlViewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* COLUNA ESQUERDA: Bestiário Oficial (10 Infectados), Monstros em Cena e Fichas de Jogadores (8 cols) */}
         <div className="lg:col-span-8 space-y-6">
-          {/* 1. Bestiário Oficial: Os 10 Infectados do Capítulo 20 (Invocação em 1 Clique) */}
+          {/* 1. Bestiário Oficial: Os 10 Infectados (Invocação em 1 Clique) */}
           <div className="bg-bg-card border border-primary-blood/40 rounded-xl p-5 space-y-4 shadow-blood-glow">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <span className="text-[10px] font-mono uppercase tracking-widest text-primary-blood">
-                  CAPÍTULO 20 // BESTIÁRIO OFICIAL DE A NOITE ETERNA
+                  BESTIÁRIO OFICIAL DE A NOITE ETERNA
                 </span>
                 <h3 className="text-sm font-bold uppercase tracking-wider text-text-main flex items-center gap-2">
                   <Skull className="w-4 h-4 text-primary-blood" />
-                  Invocar Infectado Oficial na Cena (10 Categorias)
+                  Invocar Infectado na Cena
                 </h3>
               </div>
               <span className="text-[11px] font-mono text-muted-ash">
-                Clique em "+ Invocar" para criar com a ficha oficial e Corpo de Ferimentos
+                Clique em "+ Invocar" para criar com a ficha e Corpo de Ferimentos
               </span>
             </div>
 
@@ -497,20 +513,49 @@ export const MasterControlView: React.FC<MasterControlViewProps> = ({
                       className="bg-bg-main border border-primary-blood/40 rounded-xl p-4 space-y-3"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div>
-                          <h4 className="font-bold text-sm text-text-main flex items-center gap-1.5">
-                            <Skull className="w-4 h-4 text-primary-blood" />
-                            {monster.name}
-                            {mMeta.wounds.length > 0 && (
-                              <span className="px-2 py-0.5 rounded bg-primary-blood text-text-main text-[10px] font-mono">
-                                {mMeta.wounds.length} Ferimento(s)
-                              </span>
-                            )}
-                          </h4>
-                          <p className="text-[11px] text-muted-ash">{monster.archetype}</p>
+                        <div className="flex items-center gap-3">
+                          <AvatarPortrait
+                            imageUrl={monster.avatar_url}
+                            name={monster.name}
+                            isNpc={true}
+                            size="md"
+                            editable={true}
+                            onChangeImage={(newUrl) =>
+                              onUpdateCharacter({ ...monster, avatar_url: newUrl })
+                            }
+                          />
+                          <div>
+                            <h4 className="font-bold text-sm text-text-main flex items-center gap-1.5">
+                              <Skull className="w-4 h-4 text-primary-blood" />
+                              {monster.name}
+                              {mMeta.wounds.length > 0 && (
+                                <span className="px-2 py-0.5 rounded bg-primary-blood text-text-main text-[10px] font-mono">
+                                  {mMeta.wounds.length} Ferimento(s)
+                                </span>
+                              )}
+                            </h4>
+                            <p className="text-[11px] text-muted-ash">{monster.archetype}</p>
+                          </div>
                         </div>
 
                         <div className="flex items-center gap-2">
+                          {onSendAbilityToChat && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onSendAbilityToChat(
+                                  monster.name,
+                                  `Ataque / Habilidade de ${monster.name}`,
+                                  monster.archetype
+                                )
+                              }
+                              title="Mostrar ataque/habilidade do monstro no Chat"
+                              className="px-2.5 py-1 rounded-lg bg-bg-card border border-muted-ash/30 hover:border-secondary-uv text-xs font-mono text-text-main flex items-center gap-1"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5 text-secondary-uv" />
+                              Chat
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() =>
@@ -674,18 +719,30 @@ export const MasterControlView: React.FC<MasterControlViewProps> = ({
                       className="bg-bg-main border border-muted-ash/20 rounded-xl p-4 space-y-3"
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div>
-                          <h4 className="font-bold text-sm text-text-main flex items-center gap-2">
-                            {player.name}
-                            {pMeta.wounds.length > 0 && (
-                              <span className="px-2 py-0.5 rounded bg-primary-blood text-text-main text-[10px] font-mono">
-                                {pMeta.wounds.length} Ferimento(s)
-                              </span>
-                            )}
-                          </h4>
-                          <span className="text-xs text-muted-ash">
-                            {player.archetype} • DEF {player.defense} • LF {player.wound_threshold}
-                          </span>
+                        <div className="flex items-center gap-3">
+                          <AvatarPortrait
+                            imageUrl={player.avatar_url}
+                            name={player.name}
+                            isNpc={false}
+                            size="md"
+                            editable={true}
+                            onChangeImage={(newUrl) =>
+                              onUpdateCharacter({ ...player, avatar_url: newUrl })
+                            }
+                          />
+                          <div>
+                            <h4 className="font-bold text-sm text-text-main flex items-center gap-2">
+                              {player.name}
+                              {pMeta.wounds.length > 0 && (
+                                <span className="px-2 py-0.5 rounded bg-primary-blood text-text-main text-[10px] font-mono">
+                                  {pMeta.wounds.length} Ferimento(s)
+                                </span>
+                              )}
+                            </h4>
+                            <span className="text-xs text-muted-ash">
+                              {player.archetype} • DEF {player.defense} • LF {player.wound_threshold}
+                            </span>
+                          </div>
                         </div>
 
                         <div className="flex items-center gap-2">
